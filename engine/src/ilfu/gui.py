@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 import queue
 import sys
@@ -95,7 +96,7 @@ class App:
                 self.session_dir,
             )
             self.recorder.start()
-        except Exception as exc:  # show any device problem in plain words
+        except Exception as exc:  # noqa: BLE001 - show any device problem in plain words
             self.recorder = None
             messagebox.showerror("Could not start recording", str(exc), parent=self.root)
             return
@@ -111,7 +112,7 @@ class App:
             return
         try:
             recorder.stop()
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - report, never crash the window
             messagebox.showerror("Problem while stopping", str(exc), parent=self.root)
         self._set_status("Transcribing (the first time this downloads the model)...")
         threading.Thread(target=self._transcribe, args=(self.session_dir,), daemon=True).start()
@@ -126,7 +127,7 @@ class App:
             markdown = to_markdown(segments) if segments else "(No speech found.)\n"
             (session_dir / "transcript.md").write_text(markdown, encoding="utf-8")
             self.events.put(("done", markdown))
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - any failure is reported in the window
             self.events.put(("error", str(exc)))
 
     def open_folder(self) -> None:
@@ -171,10 +172,8 @@ class App:
 
     def quit(self) -> None:
         if self.recorder is not None:
-            try:
+            with contextlib.suppress(Exception):
                 self.recorder.stop()
-            except Exception:
-                pass
             self.recorder = None
         self.root.destroy()
 
