@@ -2,7 +2,7 @@
 
 A free, open-source transcriber for online video calls. It runs on your own machine, with no accounts, no API keys and no bot joining your meeting.
 
-> **Status: Phase 0 (foundation).** Nothing is installable yet. See [docs/ROADMAP.md](docs/ROADMAP.md) for what is planned and what is done.
+> **Status: early test version for Windows.** You can install it, record a call and get a local transcript, and uninstall it again: see [docs/INSTALL_WINDOWS.md](docs/INSTALL_WINDOWS.md). Real-call capture and speech-to-text are still being verified, so expect rough edges. See [docs/ROADMAP.md](docs/ROADMAP.md) for what is done and what is planned.
 
 ## Goals
 

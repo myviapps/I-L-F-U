@@ -28,3 +28,78 @@ jobs:
         run: ruff check .
       - name: Test
         run: pytest
+
+  windows-installer:
+    name: Windows install, run, uninstall
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install with the install script
+        shell: powershell
+        run: ./windows/install.ps1
+      - name: Check install (files, Start Menu shortcut, Settings entry)
+        shell: powershell
+        run: |
+          $dir = Join-Path $env:LOCALAPPDATA 'ILFU'
+          if (-not (Test-Path "$dir\venv\Scripts\ilfu.exe")) { throw 'ilfu.exe missing' }
+          if (-not (Test-Path "$dir\uninstall.ps1")) { throw 'uninstall.ps1 missing' }
+          if (-not (Test-Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\ILFU')) { throw 'Settings entry missing' }
+          $lnk = Join-Path ([Environment]::GetFolderPath('Programs')) 'I-L-F-U Call Transcriber.lnk'
+          if (-not (Test-Path $lnk)) { throw 'Start Menu shortcut missing' }
+          & "$dir\venv\Scripts\ilfu.exe" tier
+          & "$dir\venv\Scripts\ilfu.exe" --backend fake record --seconds 1 --out "$env:RUNNER_TEMP\rec"
+          if (-not (Test-Path "$env:RUNNER_TEMP\rec\mic.wav")) { throw 'recording missing' }
+      - name: Transcribe a generated tone with the installed app (downloads the tiny model)
+        shell: powershell
+        run: |
+          $dir = Join-Path $env:LOCALAPPDATA 'ILFU'
+          & "$dir\venv\Scripts\python.exe" -c "import math, struct, wave; w = wave.open(r'$env:RUNNER_TEMP\tone.wav', 'wb'); w.setnchannels(1); w.setsampwidth(2); w.setframerate(16000); w.writeframes(b''.join(struct.pack('<h', int(6000*math.sin(2*math.pi*440*i/16000))) for i in range(32000))); w.close()"
+          & "$dir\venv\Scripts\ilfu.exe" transcribe "$env:RUNNER_TEMP\tone.wav" --model tiny --out "$env:RUNNER_TEMP\out.txt"
+          if ($LASTEXITCODE -ne 0) { throw 'transcription failed' }
+          if (-not (Test-Path "$env:RUNNER_TEMP\out.txt")) { throw 'no transcript file' }
+          Write-Host 'Transcription pipeline ran on Windows'
+      - name: Window opens and closes (smoke test)
+        shell: powershell
+        run: |
+          $dir = Join-Path $env:LOCALAPPDATA 'ILFU'
+          & "$dir\venv\Scripts\python.exe" -c "import tkinter as tk; from ilfu.gui import App; r = tk.Tk(); a = App(r, 'fake'); r.update(); r.destroy(); print('window ok')"
+      - name: Real Windows audio devices (informational, runner has no sound card)
+        continue-on-error: true
+        shell: powershell
+        run: '& "$env:LOCALAPPDATA\ILFU\venv\Scripts\ilfu.exe" devices'
+      - name: Uninstall
+        shell: powershell
+        run: ./windows/uninstall.ps1 -Quiet
+      - name: Check everything is gone
+        shell: powershell
+        run: |
+          $dir = Join-Path $env:LOCALAPPDATA 'ILFU'
+          if (Test-Path $dir) { throw 'install folder still exists' }
+          if (Test-Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\ILFU') { throw 'Settings entry still exists' }
+          $lnk = Join-Path ([Environment]::GetFolderPath('Programs')) 'I-L-F-U Call Transcriber.lnk'
+          if (Test-Path $lnk) { throw 'shortcut still exists' }
+          Write-Host 'Uninstall left nothing behind'
+
+  speech-smoke:
+    name: Real speech model smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install with speech support
+        run: python -m pip install -e "engine[asr]"
+      - name: Download the tiny model and transcribe a generated tone
+        run: |
+          python - <<'PY'
+          import math, struct, wave
+          with wave.open("tone.wav", "wb") as w:
+              w.setnchannels(1); w.setsampwidth(2); w.setframerate(16000)
+              w.writeframes(b"".join(struct.pack("<h", int(6000*math.sin(2*math.pi*440*i/16000))) for i in range(32000)))
+          PY
+          ilfu transcribe tone.wav --model tiny --format txt --out out.txt
+          echo "transcription ran, output file:"; cat out.txt

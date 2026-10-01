@@ -30,6 +30,8 @@ Week counts are rough estimates. The gate is the real milestone. Tick a box only
     - [ ] Choose and download the frozen test set, check its licenses
     - [ ] Record baseline WER for stock Whisper
 - [ ] Hardware check, automatic model tier, first-run wizard, one installer
+    - [x] Desktop window (record, stop, transcript, save), window tested in CI on Windows
+    - [x] Windows install script and uninstall (Settings > Apps, Help > Uninstall, script), install and uninstall tested in CI
     - [x] Hardware detection and tier choice (thresholds are guesses, to be measured)
     - [ ] First-run wizard and installer
 - [ ] Passive-capture check during a live call
