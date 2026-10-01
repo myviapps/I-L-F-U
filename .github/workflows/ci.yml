@@ -52,6 +52,15 @@ jobs:
           & "$dir\venv\Scripts\ilfu.exe" tier
           & "$dir\venv\Scripts\ilfu.exe" --backend fake record --seconds 1 --out "$env:RUNNER_TEMP\rec"
           if (-not (Test-Path "$env:RUNNER_TEMP\rec\mic.wav")) { throw 'recording missing' }
+      - name: Transcribe a generated tone with the installed app (downloads the tiny model)
+        shell: powershell
+        run: |
+          $dir = Join-Path $env:LOCALAPPDATA 'ILFU'
+          & "$dir\venv\Scripts\python.exe" -c "import math, struct, wave; w = wave.open(r'$env:RUNNER_TEMP\tone.wav', 'wb'); w.setnchannels(1); w.setsampwidth(2); w.setframerate(16000); w.writeframes(b''.join(struct.pack('<h', int(6000*math.sin(2*math.pi*440*i/16000))) for i in range(32000))); w.close()"
+          & "$dir\venv\Scripts\ilfu.exe" transcribe "$env:RUNNER_TEMP\tone.wav" --model tiny --out "$env:RUNNER_TEMP\out.txt"
+          if ($LASTEXITCODE -ne 0) { throw 'transcription failed' }
+          if (-not (Test-Path "$env:RUNNER_TEMP\out.txt")) { throw 'no transcript file' }
+          Write-Host 'Transcription pipeline ran on Windows'
       - name: Window opens and closes (smoke test)
         shell: powershell
         run: |
