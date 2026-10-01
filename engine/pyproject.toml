@@ -12,10 +12,14 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.5"]
+asr = ["faster-whisper>=1.1"]
 windows = ["PyAudioWPatch>=0.2.12; sys_platform == 'win32'"]
 
 [project.scripts]
 ilfu = "ilfu.cli:main"
+
+[project.gui-scripts]
+ilfu-gui = "ilfu.gui:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
