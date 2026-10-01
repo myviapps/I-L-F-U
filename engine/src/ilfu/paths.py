@@ -5,7 +5,7 @@ from __future__ import annotations
 import ctypes
 import json
 import sys
-from datetime import datetime
+import time
 from pathlib import Path
 
 INSTALL_MARKER = "ilfu-install.json"
@@ -42,7 +42,7 @@ def data_dir() -> Path:
 
 def new_session_dir(base: Path | None = None) -> Path:
     base = base or data_dir()
-    path = base / datetime.now().strftime("%Y%m%d-%H%M%S")
+    path = base / time.strftime("%Y%m%d-%H%M%S")
     path.mkdir(parents=True, exist_ok=True)
     return path
 
