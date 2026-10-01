@@ -17,11 +17,21 @@ Week counts are rough estimates. The gate is the real milestone. Tick a box only
 
 ## Phase 1: MVP (weeks 2 to 8)
 
-- [ ] Capture on one OS, mic and system audio as separate channels, written to disk continuously
+- [ ] Capture on Windows first, mic and system audio as separate channels, written to disk continuously
+    - [x] Interfaces, disk recorder and tests with a fake source
+    - [ ] Windows WASAPI backend run on a real Windows machine during a real call (code written, not yet run)
 - [ ] Engine: voice detection, faster-whisper, text and Markdown export
+    - [x] Export to txt, Markdown and SRT, with tests
+    - [ ] faster-whisper run end to end on real audio (code written, needs a model download)
 - [ ] CLI for files and live devices
+    - [x] `ilfu devices`, `record`, `tier`, `transcribe`, `eval`, `compare` (record and transcribe not yet run on real audio)
 - [ ] Evaluation harness, frozen test set, baseline WER for stock Whisper
+    - [x] WER, manifest runner and back-to-back `compare` with tests
+    - [ ] Choose and download the frozen test set, check its licenses
+    - [ ] Record baseline WER for stock Whisper
 - [ ] Hardware check, automatic model tier, first-run wizard, one installer
+    - [x] Hardware detection and tier choice (thresholds are guesses, to be measured)
+    - [ ] First-run wizard and installer
 - [ ] Passive-capture check during a live call
 
 **Gate:** a real call transcribed fully offline by someone who did not build it.
