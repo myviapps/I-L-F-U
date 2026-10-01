@@ -1,0 +1,6 @@
+# Enable these once the accounts exist. Uncomment a line and set the username.
+# github: [myviapps]          # needs GitHub Sponsors enabled for the account
+# open_collective: ilfu       # needs an Open Collective page
+# ko_fi: yourname
+# liberapay: yourname
+# custom: ["https://example.com/replace-with-your-donation-link"]

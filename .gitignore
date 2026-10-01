@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+# never commit recordings or models
+*.wav
+*.mp3
+*.m4a
+*.ogg
+*.bin
+*.gguf
+*.onnx
