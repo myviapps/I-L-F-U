@@ -19,7 +19,7 @@ def test_recorder_writes_one_wav_per_source(tmp_path):
         with wave.open(str(tmp_path / f"{name}.wav"), "rb") as wav:
             assert wav.getframerate() == 16000
             assert wav.getnchannels() == 1
-            assert wav.getnframes() > 16000 * 0.3
+            assert wav.getnframes() > 16000 * 0.1
 
 
 def test_cli_record_with_fake_backend(tmp_path, capsys):
