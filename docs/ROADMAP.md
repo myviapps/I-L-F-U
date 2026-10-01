@@ -4,7 +4,7 @@ Week counts are rough estimates. The gate is the real milestone. Tick a box only
 
 ## Phase 0: Foundation (weeks 0 to 2)
 
-- [x] License: Apache-2.0 (`LICENSE`), chosen as the default; can still be changed before the first release
+- [x] License: AGPL-3.0 (`LICENSE`), chosen by the maintainer
 - [x] README, CONTRIBUTING (DCO), CODE_OF_CONDUCT, SECURITY, GOVERNANCE, issue and PR templates
 - [x] CI on Windows, macOS and Linux (lint and tests)
 - [x] Funding file template and `docs/SPONSORS.md`

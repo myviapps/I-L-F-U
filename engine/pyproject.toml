@@ -7,11 +7,15 @@ name = "ilfu"
 version = "0.0.1"
 description = "Open-source, local-first call transcriber engine"
 requires-python = ">=3.11"
-license = { text = "Apache-2.0" }
+license = { text = "AGPL-3.0-only" }
 dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.5"]
+windows = ["PyAudioWPatch>=0.2.12; sys_platform == 'win32'"]
+
+[project.scripts]
+ilfu = "ilfu.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

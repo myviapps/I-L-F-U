@@ -39,4 +39,4 @@ You are responsible for telling people they are being recorded and for following
 
 ## License
 
-Code is under the [Apache License 2.0](LICENSE). Models and datasets have their own licenses, listed in [docs/MODEL_LICENSES.md](docs/MODEL_LICENSES.md).
+Code is under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0). You can use, study, modify and share it freely; if you distribute a modified version, or run one as a network service, you must offer your source under the same license. Models and datasets have their own licenses, listed in [docs/MODEL_LICENSES.md](docs/MODEL_LICENSES.md).

@@ -12,3 +12,7 @@ Licenses below are from memory and must be verified against each model or datase
 | LibriSpeech | Training and evaluation data | CC-BY-4.0 | n/a | not yet |
 | AMI meeting corpus | Evaluation data | CC-BY-4.0 | n/a | not yet |
 | TED-LIUM | Do not use (non-commercial terms) | CC-BY-NC-ND | No | not yet |
+
+## License of this project's own code
+
+AGPL-3.0. Models and weights bundled or downloaded by the app keep their own licenses; fine-tuned weights we publish use the most permissive license their base model and training data allow, stated in each model card.

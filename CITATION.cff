@@ -1,0 +1,8 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "I-L-F-U: open-source call transcriber"
+type: software
+license: AGPL-3.0-only
+repository-code: "https://github.com/myviapps/I-L-F-U"
+authors:
+  - name: "I-L-F-U contributors"
