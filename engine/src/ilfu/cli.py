@@ -11,6 +11,7 @@ from .capture import Recorder, get_backend
 from .evaluation import compare, evaluate, load_manifest
 from .hardware import choose_tier, detect_hardware
 from .transcript import FORMATS
+from .uninstall import launch_uninstaller
 
 
 def _cmd_devices(args: argparse.Namespace) -> int:
@@ -58,6 +59,17 @@ def _cmd_transcribe(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_gui(args: argparse.Namespace) -> int:
+    from .gui import main as gui_main
+
+    return gui_main(args.backend)
+
+
+def _cmd_uninstall(args: argparse.Namespace) -> int:
+    print(launch_uninstaller())
+    return 0
+
+
 def _cmd_eval(args: argparse.Namespace) -> int:
     from .transcribe import FasterWhisperTranscriber
 
@@ -88,6 +100,11 @@ def build_parser() -> argparse.ArgumentParser:
     rec.add_argument("--seconds", type=float, default=10.0)
     rec.add_argument("--out", type=Path, default=Path("recording"))
     rec.set_defaults(run=_cmd_record)
+
+    sub.add_parser("gui", help="open the desktop window").set_defaults(run=_cmd_gui)
+    sub.add_parser("uninstall", help="remove the app (Windows installer)").set_defaults(
+        run=_cmd_uninstall
+    )
 
     sub.add_parser("tier", help="show this machine and the model tier chosen for it").set_defaults(
         run=_cmd_tier

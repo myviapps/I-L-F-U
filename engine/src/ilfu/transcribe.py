@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Protocol
 
 from .hardware import Tier
+from .paths import model_dir
 from .transcript import Segment
 
 
@@ -25,7 +26,13 @@ class FasterWhisperTranscriber:
             from faster_whisper import WhisperModel
         except ImportError as exc:
             raise RuntimeError("Install speech support: pip install 'ilfu[asr]'") from exc
-        self._model = WhisperModel(tier.model, device=tier.device, compute_type=tier.compute_type)
+        cache = model_dir()
+        self._model = WhisperModel(
+            tier.model,
+            device=tier.device,
+            compute_type=tier.compute_type,
+            download_root=str(cache) if cache else None,
+        )
         self._language = language
 
     def transcribe(self, audio_path: Path) -> list[Segment]:
