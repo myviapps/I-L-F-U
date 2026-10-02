@@ -1,6 +1,6 @@
 # Install on Windows
 
-Status: early test version. Windows capture and speech-to-text have not yet been verified on a real call; please report what you see.
+Status: early test version. Setup, install, uninstall, recording with a fake audio source and speech-to-text are tested automatically on Windows. Capturing a real call on a real PC has not been verified yet; please report what you see.
 
 ## Install
 
@@ -13,14 +13,26 @@ Status: early test version. Windows capture and speech-to-text have not yet been
 
 No administrator rights are needed. Everything goes into `%LOCALAPPDATA%\ILFU`.
 
+## First run (setup)
+
+The first time you open the app, a setup window walks you through everything before you can record:
+
+1. **Welcome:** read and accept the agreement.
+2. **Save location:** pick the folder for recordings and transcripts.
+3. **Language and model:** pick the language you mostly hear and a speech model. The window marks the one recommended for your computer. For Hindi, Telugu and other regional languages choose Accurate or Best (see `docs/LANGUAGES.md`).
+4. **Download:** the model downloads once, with a progress bar. This is the only time the app uses the internet. Finish opens the main window.
+
+You can run the setup again any time from **File > Setup and settings**.
+
 ## Use
 
 1. Start your call as usual (Zoom, Teams, Meet or any other app).
-2. In the I-L-F-U window, click **Start recording** and confirm the consent reminder. Your own voice and the call's audio are recorded as separate tracks.
-3. When the call ends, click **Stop and transcribe**. The first time, the app downloads a speech model sized for your computer (about 150 MB to 1.5 GB).
-4. Read the transcript in the window. It is also saved in `Documents\ILFU\sessions\<date-time>\` together with the audio.
+2. In the I-L-F-U window, click **Record** and confirm the reminder. Your own voice and the call's audio are recorded as separate tracks ("You" and "Them").
+3. Captions appear in the window while you talk. Use **Pause** and **Resume** to leave out parts of the call.
+4. Click **Stop**. The transcript is saved right away in `<your folder>\sessions\<date-time>\`, together with the audio.
+5. Every recording appears in the list on the left. Select one to read it, **Play** it, **Rename** it, **Delete** it, **Copy** or **Save as** the text, or **Re-transcribe** it for the most accurate result.
 
-Everything runs on your computer. No account, no key, no upload.
+Everything runs on your computer. No account, no key, no upload. If something goes wrong, the file `ilfu.log` in `%LOCALAPPDATA%\ILFU` says what happened; attach it to a bug report.
 
 ## Uninstall
 
@@ -35,5 +47,6 @@ The uninstaller removes the app, downloaded models, the Start Menu shortcut and 
 ## Troubleshooting
 
 - **No sound captured:** make sure the call is playing through your default speakers or headphones, and that microphone access is allowed in Windows Settings > Privacy & security > Microphone.
-- **Model download fails:** check your internet connection and run again; downloads resume.
+- **Model download fails:** check your internet connection and press **Try again** in the setup window; downloads resume.
+- **Captions lag behind:** your computer is too slow for the chosen model. Pick a smaller one in File > Setup and settings. The recording itself is never affected, and Re-transcribe gives the full result afterwards.
 - **Report a problem:** open a GitHub issue and include the OS version and the output of `ilfu tier` from `%LOCALAPPDATA%\ILFU\venv\Scripts\ilfu.exe tier`.

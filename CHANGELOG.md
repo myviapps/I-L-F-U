@@ -5,6 +5,8 @@ All notable changes are listed here. Format based on [Keep a Changelog](https://
 ## [Unreleased]
 
 ### Added
+- First-run setup window (agreement, save folder, language and model, model download with progress) and `ilfu setup`.
+- Live captions while recording, pause and resume, recording history (rename, delete, play, re-transcribe), regional language choice, new window design.
 - Project foundation: license, contribution and governance docs, CI on Windows, macOS and Linux.
 - Audio capture interface, disk recorder and a Windows (WASAPI) backend.
 - Hardware detection with model tiers, transcript export (txt, Markdown, SRT), faster-whisper transcriber.

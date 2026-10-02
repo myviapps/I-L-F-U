@@ -5,6 +5,7 @@ from __future__ import annotations
 import queue
 import threading
 import wave
+from collections.abc import Callable
 from pathlib import Path
 
 from .base import AudioSource
@@ -18,6 +19,8 @@ class _Track:
         self.path = path
         self.dropped_blocks = 0
         self.frames_written = 0
+        self.paused = False
+        self.tap: Callable[[bytes], None] | None = None
         self._queue: queue.Queue[bytes | None] = queue.Queue(maxsize=_QUEUE_BLOCKS)
         self._thread = threading.Thread(target=self._write_loop, name=f"ilfu-write-{source.name}")
 
@@ -32,6 +35,8 @@ class _Track:
 
     def _on_audio(self, data: bytes) -> None:
         # Runs on the audio thread: never block, drop and count instead.
+        if self.paused:
+            return
         try:
             self._queue.put_nowait(data)
         except queue.Full:
@@ -50,6 +55,8 @@ class _Track:
                 # The wave module keeps the header current, so a crash leaves a playable file.
                 wav.writeframes(data)
                 self.frames_written += len(data) // (fmt.channels * fmt.sample_width)
+                if self.tap is not None:
+                    self.tap(data)
 
 
 class Recorder:
@@ -62,6 +69,19 @@ class Recorder:
     def start(self) -> None:
         for track in self.tracks.values():
             track.start()
+
+    def set_tap(self, tap: Callable[[str, bytes], None] | None) -> None:
+        """Also hand every recorded block to `tap(source_name, data)`, for live captions."""
+        for name, track in self.tracks.items():
+            track.tap = None if tap is None else (lambda data, n=name: tap(n, data))
+
+    def pause(self) -> None:
+        for track in self.tracks.values():
+            track.paused = True
+
+    def resume(self) -> None:
+        for track in self.tracks.values():
+            track.paused = False
 
     def stop(self) -> dict[str, int]:
         """Stop everything and return the number of dropped blocks per source."""

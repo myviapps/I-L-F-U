@@ -30,10 +30,12 @@ Week counts are rough estimates. The gate is the real milestone. Tick a box only
     - [ ] Choose and download the frozen test set, check its licenses
     - [ ] Record baseline WER for stock Whisper
 - [ ] Hardware check, automatic model tier, first-run wizard, one installer
-    - [x] Desktop window (record, stop, transcript, save), window tested in CI on Windows
+    - [x] Desktop window: record, pause, live captions, history list with rename and delete, playback, re-transcribe; window flow tested in CI on Windows with the real model and a fake audio source
+    - [ ] Live caption speed and accuracy measured on low-end machines
     - [x] Windows install script and uninstall (Settings > Apps, Help > Uninstall, script), install and uninstall tested in CI
     - [x] Hardware detection and tier choice (thresholds are guesses, to be measured)
-    - [ ] First-run wizard and installer
+    - [x] First-run setup window: agreement, save folder, language and model, model download with progress (tested in CI)
+    - [ ] One-file signed installer
 - [ ] Passive-capture check during a live call
 
 **Gate:** a real call transcribed fully offline by someone who did not build it.

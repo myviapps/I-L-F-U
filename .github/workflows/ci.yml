@@ -27,7 +27,13 @@ jobs:
       - name: Lint
         run: ruff check .
       - name: Test
+        if: runner.os != 'Linux'
         run: pytest
+      - name: Test (with a virtual screen so the window tests run)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q xvfb python3-tk
+          xvfb-run -a pytest
 
   windows-installer:
     name: Windows install, run, uninstall
@@ -61,11 +67,19 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'transcription failed' }
           if (-not (Test-Path "$env:RUNNER_TEMP\out.txt")) { throw 'no transcript file' }
           Write-Host 'Transcription pipeline ran on Windows'
-      - name: Window opens and closes (smoke test)
+      - name: First-run setup without the window (downloads the base model)
         shell: powershell
         run: |
           $dir = Join-Path $env:LOCALAPPDATA 'ILFU'
-          & "$dir\venv\Scripts\python.exe" -c "import tkinter as tk; from ilfu.gui import App; r = tk.Tk(); a = App(r, 'fake'); r.update(); r.destroy(); print('window ok')"
+          & "$dir\venv\Scripts\ilfu.exe" setup --model base --accept-terms --save-dir "$env:RUNNER_TEMP\ilfu-data"
+          if ($LASTEXITCODE -ne 0) { throw 'setup failed' }
+          if (-not (Test-Path "$dir\config.json")) { throw 'config not saved' }
+      - name: Window flow (record, pause, stop, live captions, history) with the real model
+        shell: powershell
+        run: |
+          $dir = Join-Path $env:LOCALAPPDATA 'ILFU'
+          & "$dir\venv\Scripts\python.exe" .github/scripts/gui_check.py
+          if ($LASTEXITCODE -ne 0) { throw 'window flow failed' }
       - name: Real Windows audio devices (informational, runner has no sound card)
         continue-on-error: true
         shell: powershell

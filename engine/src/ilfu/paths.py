@@ -36,8 +36,13 @@ def documents_dir() -> Path:
 
 
 def data_dir() -> Path:
-    """Recordings and transcripts. Kept when the app is uninstalled unless the user says otherwise."""
-    return documents_dir() / "ILFU" / "sessions"
+    """Recordings and transcripts. Kept when the app is uninstalled unless the user says otherwise.
+
+    The user picks the folder in the setup step; the default is `Documents\\ILFU\\sessions`.
+    """
+    from .config import load
+
+    return load().sessions_dir()
 
 
 def new_session_dir(base: Path | None = None) -> Path:

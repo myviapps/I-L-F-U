@@ -10,8 +10,30 @@ from pathlib import Path
 from .capture import Recorder, get_backend
 from .evaluation import compare, evaluate, load_manifest
 from .hardware import choose_tier, detect_hardware
+from .models import MODELS
 from .transcript import FORMATS
 from .uninstall import launch_uninstaller
+
+
+def _cmd_setup(args: argparse.Namespace) -> int:
+    """Headless version of the first-run setup window (also used by CI)."""
+    from . import config, models
+
+    if not args.accept_terms:
+        print("Read the agreement in the setup window or docs, then pass --accept-terms.")
+        return 2
+    hw = detect_hardware()
+    name = args.model or models.recommended(hw.cpu_cores, hw.ram_gb, hw.has_cuda)
+    print(f"Downloading model '{name}' ({models.info(name).size_mb} MB)...")
+    models.download(name, lambda f: print(f"\r{f:.0%}", end="", flush=True))
+    print()
+    cfg = config.load()
+    cfg.model, cfg.language = name, args.language
+    cfg.save_dir = str(args.save_dir) if args.save_dir else cfg.save_dir
+    cfg.terms_version, cfg.setup_done = config.TERMS_VERSION, True
+    config.save(cfg)
+    print(f"Setup saved to {config.config_path()}")
+    return 0
 
 
 def _cmd_devices(args: argparse.Namespace) -> int:
@@ -100,6 +122,13 @@ def build_parser() -> argparse.ArgumentParser:
     rec.add_argument("--seconds", type=float, default=10.0)
     rec.add_argument("--out", type=Path, default=Path("recording"))
     rec.set_defaults(run=_cmd_record)
+
+    su = sub.add_parser("setup", help="download a speech model and save settings, no window")
+    su.add_argument("--model", choices=[m.name for m in MODELS])
+    su.add_argument("--language", default="auto")
+    su.add_argument("--save-dir", type=Path)
+    su.add_argument("--accept-terms", action="store_true")
+    su.set_defaults(run=_cmd_setup)
 
     sub.add_parser("gui", help="open the desktop window").set_defaults(run=_cmd_gui)
     sub.add_parser("uninstall", help="remove the app (Windows installer)").set_defaults(
