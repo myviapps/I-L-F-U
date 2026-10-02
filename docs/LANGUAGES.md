@@ -13,7 +13,7 @@ Accuracy depends heavily on the language and the model size. Roughly:
 
 ## Measured so far
 
-On 25 FLEURS clips per language (see `docs/BENCHMARKS.md`): English 6 to 9% word errors, Hindi 106% with the Fast model and 58% with Balanced, Telugu 134% with Fast and 101% with Balanced. With Best (large-v3-turbo, 10 clips): English 6%, Hindi 35%, Telugu 81%. In plain terms: **Hindi and Telugu are not usable with the Fast and Balanced models**; Hindi is a readable draft only with Best; **Telugu is still mostly wrong even with Best**. Medium (Accurate) is not measured yet. Improving regional languages by fine-tuning is planned for a later phase.
+On 25 FLEURS clips per language (see `docs/BENCHMARKS.md`): English 6 to 9% word errors, Hindi 106% with the Fast model and 55% with Balanced, Telugu 134% with Fast and 118% with Balanced. With Best (large-v3-turbo, 10 clips): English 6%, Hindi 35%, Telugu 81%. In plain terms: **Hindi and Telugu are not usable with the Fast and Balanced models**; Hindi is a readable draft only with Best; **Telugu is still mostly wrong even with Best**. Medium (Accurate) scored Hindi 39% and Telugu 101%, so it is not better than Best and is much slower. Improving regional languages by fine-tuning is planned for a later phase.
 
 ## Tips
 

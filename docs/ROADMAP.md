@@ -28,7 +28,7 @@ Week counts are rough estimates. The gate is the real milestone. Tick a box only
 - [ ] Evaluation harness, frozen test set, baseline WER for stock Whisper
     - [x] WER, manifest runner and back-to-back `compare` with tests
     - [x] Frozen test set: FLEURS en/hi/te, 25 clips each, CC BY 4.0, checksums in `benchmark/frozen-clips.json`
-    - [x] Baseline WER for stock Whisper base and small (`docs/BENCHMARKS.md`); medium and large-v3-turbo not yet measured
+    - [x] Baseline WER for stock Whisper base, small, medium and large-v3-turbo (`docs/BENCHMARKS.md`)
     - [ ] Commit machine-readable baselines so CI can fail on a regression
 - [ ] Hardware check, automatic model tier, first-run wizard, one installer
     - [x] App interface (local web app in its own Edge/Chrome window): record, pause, live captions, history with search, rename, delete, audio player, export, re-transcribe; tested in a real browser and, with the real model and a fake audio source, on Windows in CI
