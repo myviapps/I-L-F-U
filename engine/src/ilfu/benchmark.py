@@ -10,7 +10,7 @@ import json
 import os
 import tarfile
 import time
-import wave
+import struct
 from pathlib import Path
 
 from .evaluation import Item
@@ -103,8 +103,19 @@ def freeze_check(items: list[Item], frozen_path: Path) -> tuple[dict[str, str], 
 
 
 def _seconds(path: Path) -> float:
-    with wave.open(str(path), "rb") as w:
-        return w.getnframes() / w.getframerate()
+    """Clip length from the RIFF header. Works for float WAVs, which `wave` refuses."""
+    data = path.read_bytes()
+    pos, rate, frame_bytes = 12, 0, 0
+    while pos + 8 <= len(data):
+        tag, size = struct.unpack("<4sI", data[pos : pos + 8])
+        if tag == b"fmt ":
+            _fmt, channels, rate, _br, _al, bits = struct.unpack("<HHIIHH", data[pos + 8 : pos + 24])
+            frame_bytes = channels * bits // 8
+        elif tag == b"data":
+            size = min(size, len(data) - pos - 8)
+            return size / frame_bytes / rate if frame_bytes and rate else 0.0
+        pos += 8 + size + (size & 1)
+    return 0.0
 
 
 def run(items: list[Item], transcriber: Transcriber, model: str) -> dict:

@@ -104,3 +104,17 @@ def test_run_reports_wer_per_language_and_speed(tmp_path, fake_fleurs):
     assert report["wer"] == 0 and report["wer_by_tag"] == {"en": 0.0}
     assert report["audio_seconds"] > 0 and report["real_time_factor"] is not None
     assert "English" in benchmark.to_markdown(report)
+
+
+def test_seconds_reads_float_wav(tmp_path):
+    import struct
+
+    from ilfu.benchmark import _seconds
+
+    frames = 16000 * 2
+    payload = b"\0" * (frames * 4)
+    header = b"RIFF" + struct.pack("<I", 36 + len(payload)) + b"WAVE"
+    fmt = b"fmt " + struct.pack("<IHHIIHH", 16, 3, 1, 16000, 64000, 4, 32)
+    path = tmp_path / "f.wav"
+    path.write_bytes(header + fmt + b"data" + struct.pack("<I", len(payload)) + payload)
+    assert _seconds(path) == 2.0
