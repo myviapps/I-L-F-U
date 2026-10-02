@@ -37,8 +37,12 @@ def _cmd_setup(args: argparse.Namespace) -> int:
 
 
 def _cmd_devices(args: argparse.Namespace) -> int:
-    for name in get_backend(args.backend).list_devices():
+    backend = get_backend(args.backend)
+    for name in backend.list_devices():
         print(name)
+    print("Microphones you can choose:", ", ".join(backend.list_microphones()) or "(default only)")
+    print("Outputs you can capture:", ", ".join(backend.list_speakers()) or "(default only)")
+    backend.close()
     return 0
 
 

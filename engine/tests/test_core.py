@@ -100,3 +100,69 @@ def test_language_can_change_while_ready(make_controller):
     assert c.transcriber.language == "hi" and c.cfg.language == "hi"
     with pytest.raises(ApiError):
         c.set_language("klingon")
+
+
+def test_audio_test_reports_levels(make_controller):
+    c = make_controller()
+    result = c.audio_test(seconds=0.6)
+    assert set(result) == {"mic", "system"}
+    assert all(r["found"] and r["peak"] > 0.05 for r in result.values())  # fake tones are loud
+
+
+def test_recording_continues_without_a_microphone(make_controller, monkeypatch):
+    from ilfu.capture import fake
+
+    c = make_controller()
+
+    def no_mic(self, device=None):
+        raise RuntimeError("no microphone")
+
+    monkeypatch.setattr(fake.FakeBackend, "open_microphone", no_mic)
+    c.start_recording()
+    state = c.state()
+    assert state["recording"] and "No microphone" in state["warnings"][0]
+    assert set(state["levels"]) == {"system"}
+    c.stop_recording()
+    assert wait(lambda: not c.busy)
+    assert len(c.sessions()) == 1
+
+
+def test_recording_fails_clearly_when_nothing_can_be_opened(make_controller, monkeypatch):
+    from ilfu.capture import fake
+
+    c = make_controller()
+
+    def fail(self, device=None):
+        raise RuntimeError("device busy")
+
+    monkeypatch.setattr(fake.FakeBackend, "open_microphone", fail)
+    monkeypatch.setattr(fake.FakeBackend, "open_system_audio", fail)
+    with pytest.raises(ApiError, match="device busy"):
+        c.start_recording()
+    assert not c.state()["recording"]
+
+
+def test_chosen_devices_are_used_and_a_missing_one_falls_back(make_controller):
+    c = make_controller()
+    assert c.devices()["microphones"] == ["Fake microphone", "Fake headset microphone"]
+    c.set_devices("Fake headset microphone", "Fake headset")
+    c.start_recording()
+    assert not c.state()["warnings"]
+    c.stop_recording()
+    assert wait(lambda: not c.busy)
+    c.set_devices("USB mic that was unplugged", "")
+    c.start_recording()
+    warnings = c.state()["warnings"]
+    assert any("USB mic that was unplugged" in w for w in warnings)  # told, and still recording
+    assert c.state()["recording"]
+    c.stop_recording()
+    assert wait(lambda: not c.busy)
+
+
+def test_devices_cannot_change_mid_recording(make_controller):
+    c = make_controller()
+    c.start_recording()
+    with pytest.raises(ApiError):
+        c.set_devices("Fake headset microphone", "")
+    c.stop_recording()
+    assert wait(lambda: not c.busy)

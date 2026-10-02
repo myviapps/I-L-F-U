@@ -72,6 +72,14 @@ h1,h2,h3,p{margin:0}
 .bars i{width:4px;border-radius:2px;background:var(--primary);height:6px;animation:bar 1s ease-in-out infinite}
 .bars.paused i{animation:none;opacity:.35}
 .spacer{flex:1}
+.meters{display:grid;gap:7px;flex:1;min-width:140px;max-width:320px}
+.meter{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted)}
+.meter b{width:34px;font-weight:600}
+.meter .track{flex:1;height:8px;border-radius:5px;background:var(--surface-2);overflow:hidden}
+.meter .fill{height:100%;width:0;border-radius:5px;background:linear-gradient(90deg,#34d399,#6366f1);transition:width .12s}
+.meter.off{opacity:.45}
+.link{background:none;border:0;color:var(--primary);cursor:pointer;font-weight:600;padding:6px}
+.test-row{display:flex;align-items:center;gap:12px;padding:10px 0}.test-row b{width:90px}
 .banner{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:12px;margin-bottom:14px;background:var(--warn-50);color:var(--warn);font-weight:500}
 .banner.bad{background:var(--danger-50);color:var(--danger)}.banner.info{background:var(--primary-50);color:var(--primary)}
 .section-title{display:flex;align-items:center;justify-content:space-between;margin:22px 2px 10px}
@@ -200,10 +208,23 @@ function renderHome(v) {
   const st = S.st, ready = st.model_state === "ready";
   v.innerHTML = '<div class="card hero"><div class="mic">' + MIC + '</div><h1>Ready when you are</h1><p>Start your call, then press record. You get live captions and a clean transcript. Everything stays on this computer.</p>' +
     '<div class="row"><select class="select" id="lang" aria-label="Language">' + langOptions(st.config.language) + '</select><button class="btn rec" id="rec">● Start recording</button></div>' +
-    (ready ? "" : '<p style="margin:18px auto 0;font-size:13px">' + (st.model_state === "error" ? "The speech model could not be loaded: " + esc(st.model_error) : "Loading the speech model… you can start recording now, captions begin when it is ready.") + "</p>") + "</div>" +
+    '<div style="margin-top:14px"><button class="link" id="testAudio">Test my audio (microphone and call sound)</button></div>' + (ready ? "" : '<p style="margin:18px auto 0;font-size:13px">' + (st.model_state === "error" ? "The speech model could not be loaded: " + esc(st.model_error) : "Loading the speech model… you can start recording now, captions begin when it is ready.") + "</p>") + "</div>" +
     '<div class="features"><div class="card feature"><b>Live captions</b><span>Words appear while people speak, labelled You and Them.</span></div><div class="card feature"><b>Private by design</b><span>No account, no upload. Audio never leaves your computer.</span></div><div class="card feature"><b>Many languages</b><span>Hindi, Telugu, Tamil and more. Pick yours for the best result.</span></div></div>';
   $("#lang").onchange = guard(async e => { await api("/api/language", {method: "POST", body: {language: e.target.value}}); });
   $("#rec").onclick = confirmRecord;
+  $("#testAudio").onclick = runAudioTest;
+}
+
+async function runAudioTest() {
+  overlay('<div class="dialog" role="dialog" aria-modal="true"><h2>Testing your audio…</h2><p>Speak, and play a video or any sound on this computer. This takes a few seconds.</p><div style="margin-top:16px"><span class="spin"></span></div></div>');
+  try {
+    const r = await api("/api/audio-test", {method: "POST"});
+    const row = (label, x, quietMsg) => { if (!x) return ""; const ok = x.found && x.peak > 0.02, icon = ok ? "✅" : x.found ? "⚠️" : "❌";
+      const msg = !x.found ? "Not available: " + esc(x.error) : ok ? "Working" : quietMsg;
+      return '<div class="test-row"><b>' + label + "</b><span>" + icon + " " + msg + "</span></div>"; };
+    overlay('<div class="dialog" role="dialog" aria-modal="true"><h2>Audio test</h2>' + row("Microphone", r.mic, "Heard nothing. Speak louder or check the microphone in Windows settings.") + row("Call sound", r.system, "Heard nothing. Play a video or call sound and test again.") + '<div class="foot"><button class="btn primary" id="ok">Done</button></div></div>');
+    $("#ok").onclick = closeOverlay;
+  } catch (e) { closeOverlay(); toast(e.message, true); }
 }
 
 function confirmRecord() {
@@ -215,8 +236,7 @@ function confirmRecord() {
 function renderRecording(v) {
   const st = S.st;
   if (!$("#livebox")) {
-    const bars = Array.from({length: 28}, (_, i) => '<i style="animation-delay:' + (i * 0.07).toFixed(2) + 's"></i>').join("");
-    v.innerHTML = '<div id="banners"></div><div class="card"><div class="livehead"><span class="dot" id="ldot"></span><div><div style="font-weight:600" id="lstate">Recording</div><div class="timer" id="ltimer">00:00</div></div><div class="bars" id="lbars">' + bars + '</div><div class="actions"><button class="btn" id="lpause">⏸ Pause</button><button class="btn danger solid" id="lstop">■ Stop</button></div></div></div>' +
+    v.innerHTML = '<div id="banners"></div><div class="card"><div class="livehead"><span class="dot" id="ldot"></span><div><div style="font-weight:600" id="lstate">Recording</div><div class="timer" id="ltimer">00:00</div></div><div class="meters" id="lbars"><div class="meter" id="mYou"><b>You</b><div class="track"><div class="fill"></div></div></div><div class="meter" id="mThem"><b>Them</b><div class="track"><div class="fill"></div></div></div></div><div class="actions"><button class="btn" id="lpause">⏸ Pause</button><button class="btn danger solid" id="lstop">■ Stop</button></div></div></div>' +
       '<div class="section-title"><h2>Live captions</h2><span class="pill" id="lcount"><i></i><span>0 lines</span></span></div><div class="card"><div class="captions" id="livebox" aria-live="polite"></div></div>';
     $("#lpause").onclick = guard(async () => { S.st = await api("/api/record/" + (S.st.paused ? "resume" : "pause"), {method: "POST"}); updateLive(); });
     $("#lstop").onclick = guard(async () => { $("#lstop").disabled = true; S.st = await api("/api/record/stop", {method: "POST"}); S.liveSegs = S.segs; render(); schedulePoll(); });
@@ -239,9 +259,11 @@ function updateLive() {
   const st = S.st; if (!$("#ltimer")) return;
   if (st.busy === "finishing") { $("#lstate").textContent = "Saving…"; $("#lpause").disabled = true; $("#lstop").disabled = true; }
   else { $("#lstate").textContent = st.paused ? "Paused" : "Recording"; $("#lpause").textContent = st.paused ? "▶ Resume" : "⏸ Pause"; }
-  $("#ldot").className = "dot" + (st.paused || st.busy ? " paused" : ""); $("#lbars").className = "bars" + (st.paused || st.busy ? " paused" : "");
+  $("#ldot").className = "dot" + (st.paused || st.busy ? " paused" : "");
+  const lv = st.levels || {}; const meter = (id, key) => { const m = $(id); const has = key in lv; m.classList.toggle("off", !has); m.querySelector(".fill").style.width = has && !st.paused ? Math.min(100, Math.round(Math.sqrt(lv[key]) * 100)) + "%" : "0%"; };
+  meter("#mYou", "mic"); meter("#mThem", "system");
   $("#ltimer").textContent = fmt(st.elapsed); $("#lcount span").textContent = S.segs.length + (S.segs.length === 1 ? " line" : " lines");
-  const b = [];
+  const b = (st.warnings || []).map(w => '<div class="banner">' + esc(w) + "</div>");
   if (st.model_state !== "ready" && st.model_state !== "error") b.push('<div class="banner info"><span class="spin"></span><span>Loading the speech model. Captions start when it is ready. Your audio is being recorded.</span></div>');
   if (st.model_state === "error") b.push('<div class="banner bad">The speech model could not be loaded, so there are no live captions. Recording continues. Use Re-transcribe afterwards.</div>');
   if (st.live_error) b.push('<div class="banner bad">Live captions stopped (' + esc(st.live_error) + "). Recording continues. Use Re-transcribe afterwards.</div>");
@@ -291,20 +313,27 @@ function confirmDelete(d) {
 /* ---------- settings ---------- */
 function renderSettings(v) {
   const st = S.st, c = st.config;
-  if (!S.settingsDraft) S.settingsDraft = { model: c.model, dir: c.save_dir, lang: c.language };
+  if (!S.settingsDraft) S.settingsDraft = { model: c.model, dir: c.save_dir, lang: c.language, mic: "", speaker: "" };
   const dr = S.settingsDraft, dl = st.download;
+  if (!S.devices && !S.devicesLoading) { S.devicesLoading = true; api("/api/devices").then(d => { S.devices = d; dr.mic = d.selected.mic; dr.speaker = d.selected.speaker; S.devicesLoading = false; if (S.view === "settings") renderSettings($("#view")); }).catch(() => { S.devices = {microphones: [], speakers: [], selected: {mic: "", speaker: ""}}; S.devicesLoading = false; }); }
+  const dev = S.devices || {microphones: [], speakers: [], selected: {}};
+  const devOpts = (list, sel) => '<option value="">Windows default</option>' + list.map(n => '<option value="' + esc(n) + '"' + (n === sel ? " selected" : "") + ">" + esc(n) + "</option>").join("");
   const models = S.cat.models.map(m => '<label class="model ' + (dr.model === m.name ? "sel" : "") + '"><input type="radio" name="model" value="' + m.name + '"' + (dr.model === m.name ? " checked" : "") + '><div><b>' + esc(m.label) + " · " + m.size_mb + " MB" + (m.name === c.model ? '<span class="tag">In use</span>' : m.downloaded ? '<span class="tag">Downloaded</span>' : "") + (m.recommended ? '<span class="tag rec">Recommended</span>' : "") + "</b><small>" + esc(m.note) + "</small></div></label>").join("");
   v.innerHTML = '<div class="head"><div><div class="title">Settings</div><div class="chips"><span class="chip">Version ' + esc(st.version) + "</span></div></div></div>" +
     '<div class="card"><div class="set-row"><div><h3>Language</h3><p>The language you mostly hear. Choosing one gives better results than automatic detection.</p></div><select class="select" id="sLang">' + langOptions(dr.lang) + "</select></div>" +
+    '<div class="set-row"><div><h3>Microphone</h3><p>Your own voice ("You"). Pick your headset or USB microphone if it is not the Windows default.</p></div><select class="select" id="sMic" style="max-width:320px">' + devOpts(dev.microphones, dr.mic) + "</select></div>" +
+    '<div class="set-row"><div><h3>Call sound (speakers or headset)</h3><p>Whose sound is captured as "Them". Choose the same output your meeting app plays through. Choose before you start recording; changing devices during a call is not followed.</p></div><div style="display:flex;gap:8px;align-items:center"><select class="select" id="sSpk" style="max-width:320px">' + devOpts(dev.speakers, dr.speaker) + '</select><button class="btn sm" id="sRefresh" title="Look for newly connected devices">↻</button></div></div>' +
     '<div class="set-row" style="display:block"><h3>Speech model</h3><p style="max-width:none">Bigger models are more accurate (especially for Hindi, Telugu and other languages) but need a faster computer. Your computer: ' + S.cat.hardware.cores + " cores, " + S.cat.hardware.ram_gb + " GB memory" + (S.cat.hardware.cuda ? ", NVIDIA graphics" : "") + '.</p></div><div class="models">' + models + "</div>" +
     '<div class="set-row"><div><h3>Save location</h3><p>Recordings and transcripts are saved here. Existing recordings stay where they are.</p></div><div class="field" style="margin:0;min-width:300px;flex:1"><div class="row"><input class="input" id="sDir" value="' + esc(dr.dir) + '"><button class="btn" id="sBrowse">Browse…</button></div></div></div>' +
     '<div class="set-row"><div>' + (dl.state === "running" ? '<h3>Downloading the model…</h3><p>' + Math.round(dl.progress * 100) + "%. You can keep using the app.</p>" : dl.state === "error" ? '<h3 style="color:var(--danger)">Download failed</h3><p>' + esc(dl.error) + "</p>" : "<h3>Apply changes</h3><p>Switching to a model that is not downloaded yet downloads it first.</p>") + '</div><button class="btn primary" id="sApply"' + (dl.state === "running" || st.recording || st.busy ? " disabled" : "") + ">Save changes</button></div></div>" +
     '<div class="section-title"><h2>About and privacy</h2></div><div class="card pad"><p style="color:var(--muted)">I-L-F-U is free and open source (AGPL-3.0). It has no accounts and sends no audio or text anywhere. The internet is used only to download the speech model. <a href="https://github.com/myviapps/I-L-F-U" target="_blank" rel="noopener" style="color:var(--primary)">Project page</a></p></div>' +
     '<div class="section-title"><h2>Uninstall</h2></div><div class="card pad" style="display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap"><p style="color:var(--muted);max-width:520px">Removes the app and its downloaded models from this computer. You will be asked whether to keep your recordings.</p><button class="btn danger" id="sUn">Uninstall…</button></div>';
   v.querySelectorAll('input[name=model]').forEach(r => r.onchange = () => { dr.model = r.value; renderSettings(v); });
+  $("#sMic").onchange = e => dr.mic = e.target.value; $("#sSpk").onchange = e => dr.speaker = e.target.value;
+  $("#sRefresh").onclick = () => { S.devices = null; renderSettings(v); };
   $("#sLang").onchange = e => dr.lang = e.target.value; $("#sDir").oninput = e => dr.dir = e.target.value;
   $("#sBrowse").onclick = guard(async () => { const r = await api("/api/pick-folder", {method: "POST"}); if (r.path) { dr.dir = r.path; $("#sDir").value = r.path; } else toast("Type the folder path instead"); });
-  $("#sApply").onclick = guard(async () => { S.st = await api("/api/setup", {method: "POST", body: {accept_terms: true, save_dir: dr.dir, language: dr.lang, model: dr.model}}); S.cat = await api("/api/catalog"); toast(S.st.download.state === "running" ? "Downloading the model…" : "Settings saved"); schedulePoll(); render(); });
+  $("#sApply").onclick = guard(async () => { await api("/api/devices", {method: "POST", body: {mic: dr.mic, speaker: dr.speaker}}); S.st = await api("/api/setup", {method: "POST", body: {accept_terms: true, save_dir: dr.dir, language: dr.lang, model: dr.model}}); S.cat = await api("/api/catalog"); toast(S.st.download.state === "running" ? "Downloading the model…" : "Settings saved"); schedulePoll(); render(); });
   $("#sUn").onclick = () => overlay('<div class="dialog" role="dialog" aria-modal="true"><h2>Uninstall I-L-F-U?</h2><p>The app and its speech models will be removed. You will choose whether to keep your recordings and transcripts.</p><div class="foot"><button class="btn" id="no">Cancel</button><button class="btn danger solid" id="yes">Uninstall</button></div></div>') || ($("#no").onclick = closeOverlay, $("#yes").onclick = guard(async () => { const r = await api("/api/uninstall", {method: "POST"}); closeOverlay(); if (r.started) { document.body.innerHTML = '<div style="display:grid;place-items:center;height:100vh;text-align:center;padding:20px"><div><h2>The uninstaller has started</h2><p style="color:#6b7280">Continue in the window that opened. You can close this one.</p></div></div>'; clearTimeout(S.poll); } else toast(r.message, true); }));
 }
 

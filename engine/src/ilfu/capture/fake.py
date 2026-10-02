@@ -46,8 +46,18 @@ class FakeBackend(CaptureBackend):
     def list_devices(self) -> list[str]:
         return ["fake system audio (440 Hz)", "fake microphone (880 Hz)"]
 
-    def open_system_audio(self) -> AudioSource:
+    def list_microphones(self) -> list[str]:
+        return ["Fake microphone", "Fake headset microphone"]
+
+    def list_speakers(self) -> list[str]:
+        return ["Fake speakers", "Fake headset"]
+
+    def open_system_audio(self, device: str | None = None) -> AudioSource:
+        if device and device not in self.list_speakers():
+            raise RuntimeError(f"Output device not found: {device}")
         return _ToneSource("system", 440.0)
 
-    def open_microphone(self) -> AudioSource:
+    def open_microphone(self, device: str | None = None) -> AudioSource:
+        if device and device not in self.list_microphones():
+            raise RuntimeError(f"Microphone not found: {device}")
         return _ToneSource("mic", 880.0)

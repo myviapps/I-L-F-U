@@ -51,6 +51,8 @@ class Config:
     save_dir: str = ""
     model: str = ""  # a model name from models.MODELS, empty until chosen
     language: str = "auto"
+    mic_device: str = ""  # empty means the Windows default
+    speaker_device: str = ""  # whose sound to capture; empty means the Windows default
 
     def language_code(self) -> str | None:
         """What to pass to the speech engine: None means detect automatically."""

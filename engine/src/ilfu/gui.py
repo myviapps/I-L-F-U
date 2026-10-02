@@ -97,6 +97,9 @@ def _running_instance() -> str | None:
 def main(backend: str = "auto", show_window: bool = True) -> int:
     with contextlib.suppress(OSError):
         _setup_log()
+    from .capture.priority import lower_process_priority
+
+    lower_process_priority()
     existing = _running_instance()
     if existing:
         if show_window:

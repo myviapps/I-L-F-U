@@ -288,3 +288,80 @@ def test_cli_setup_downloads_and_saves(tmp_path, monkeypatch):
     cfg = config.load(tmp_path / "cfg.json")
     assert cfg.model == "base" and cfg.setup_done
     assert not config.needs_setup(cfg)
+
+
+def test_quiet_voice_is_boosted_and_loud_or_silent_audio_is_not():
+    import pytest
+
+    pytest.importorskip("numpy")
+    from ilfu.audio_utils import MAX_GAIN, boost_pcm16, gain_for
+
+    quiet = struct.pack("<400h", *([600, -600] * 200))  # peak about 1.8% of full scale
+    out = struct.unpack("<400h", boost_pcm16(quiet))
+    assert max(out) > 600 * 8
+    loud = struct.pack("<400h", *([20000, -20000] * 200))
+    assert boost_pcm16(loud) == loud
+    silent = bytes(800)
+    assert boost_pcm16(silent) == silent
+    assert gain_for(0.0041) <= MAX_GAIN  # hiss is never boosted without limit
+    assert gain_for(0.001) == 1.0
+
+
+def test_session_transcription_boosts_quiet_tracks(tmp_path):
+    import pytest
+
+    pytest.importorskip("numpy")
+    from ilfu.session import transcribe_session
+
+    with wave.open(str(tmp_path / "mic.wav"), "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(16000)
+        w.writeframes(struct.pack("<1600h", *([500, -500] * 800)))
+    seen = {}
+
+    class Spy:
+        def transcribe(self, path):
+            with wave.open(str(path), "rb") as w:
+                seen["peak"] = max(struct.unpack(f"<{w.getnframes()}h", w.readframes(w.getnframes())))
+            return [Segment(0, 1, "quiet words")]
+
+    segs = transcribe_session(tmp_path, Spy())
+    assert segs[0].text == "quiet words" and seen["peak"] > 500 * 8
+
+
+def test_heavy_transcription_never_costs_recorded_audio(tmp_path):
+    """A transcriber that hogs the CPU may delay captions but must not lose or gap the audio."""
+    import time as _time
+
+    class Hog:
+        def transcribe(self, path):
+            end = _time.time() + 0.6
+            while _time.time() < end:  # busy loop, as a heavy model would
+                sum(range(2000))
+            return [Segment(0.0, 1.0, "slow words")]
+
+    rec = Recorder({"mic": Tone("mic"), "system": Tone("system")}, tmp_path)
+    live = LiveTranscriber(rec, lambda: Hog(), lambda s: None, chunk_seconds=0.5)
+    rec.start()
+    live.start()
+    time.sleep(3.0)
+    dropped = rec.stop()
+    live.stop()
+    assert dropped == {"mic": 0, "system": 0}
+    for name in ("mic", "system"):
+        with wave.open(str(tmp_path / f"{name}.wav"), "rb") as w:
+            assert 2.4 < w.getnframes() / 16000 < 3.4  # about as long as the recording
+
+
+def test_background_priority_is_lowered():
+    import subprocess
+    import sys
+
+    code = (
+        "import os; from ilfu.capture.priority import lower_process_priority as f; "
+        "a = os.nice(0); f(); print(os.nice(0) - a)"
+    )
+    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    if sys.platform != "win32":
+        assert int(out.stdout.strip()) > 0

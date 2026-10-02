@@ -9,6 +9,8 @@ import contextlib
 import json
 import logging
 import re
+import shutil
+import tempfile
 import threading
 import time
 from dataclasses import asdict
@@ -59,6 +61,30 @@ def _writable(folder: Path) -> str | None:
     return None
 
 
+def _open_sources(backend, cfg: Config) -> tuple[dict, dict, list[str]]:
+    """Open the call audio and the microphone, using the chosen devices when they exist."""
+    sources: dict = {}
+    problems: dict = {}
+    notes: list[str] = []
+    for name, opener, chosen, label in (
+        ("system", backend.open_system_audio, cfg.speaker_device, "output device"),
+        ("mic", backend.open_microphone, cfg.mic_device, "microphone"),
+    ):
+        try:
+            try:
+                sources[name] = opener(chosen or None)
+            except Exception:
+                if not chosen:
+                    raise
+                log.exception("chosen %s not available: %s", label, chosen)
+                sources[name] = opener(None)
+                notes.append(f"The {label} \"{chosen}\" was not found, so the Windows default is used.")
+        except Exception as exc:
+            log.exception("could not open %s", name)
+            problems[name] = str(exc)
+    return sources, problems, notes
+
+
 class Controller:
     def __init__(
         self, backend: str = "auto", cfg: Config | None = None, preload: bool = True
@@ -81,6 +107,8 @@ class Controller:
         self.paused = False
         self.last_finished = ""
         self.error = ""
+        self.warnings: list[str] = []
+        self._backend = None
         self.download: dict = {"state": "idle", "model": "", "progress": 0.0, "error": ""}
         self._pending: dict = {}
         hw = detect_hardware()
@@ -140,6 +168,8 @@ class Controller:
                 "model_error": self.model_error,
                 "lag": round(live.lag_seconds(), 1) if live and not self.paused else 0,
                 "live_error": self.live_error,
+                "warnings": list(self.warnings),
+                "levels": self.recorder.levels() if self.recorder else {},
                 "segments": self.segments[since:],
                 "segment_total": len(self.segments),
                 "download": dict(self.download),
@@ -231,11 +261,30 @@ class Controller:
                 raise ApiError("Finish the setup first.")
             try:
                 backend = get_backend(self.backend_name)
-                session = new_session_dir(self.cfg.sessions_dir())
-                recorder = Recorder(
-                    {"system": backend.open_system_audio(), "mic": backend.open_microphone()},
-                    session,
+            except Exception as exc:
+                log.exception("no capture backend")
+                raise ApiError(f"Could not start recording: {exc}") from exc
+            sources, problems, notes = _open_sources(backend, self.cfg)
+            if not sources:
+                backend.close()
+                raise ApiError(
+                    "Could not start recording. No audio device could be opened: "
+                    + "; ".join(f"{n}: {m}" for n, m in problems.items())
                 )
+            self.warnings = list(notes)
+            if "mic" in problems:
+                self.warnings.append(
+                    "No microphone found, so only the call audio is recorded. "
+                    f"({problems['mic']})"
+                )
+            if "system" in problems:
+                self.warnings.append(
+                    "Could not capture the call audio, so only your microphone is recorded. "
+                    f"({problems['system']})"
+                )
+            try:
+                session = new_session_dir(self.cfg.sessions_dir())
+                recorder = Recorder(sources, session)
                 self.segments = []
                 self.live_error = ""
                 self.live = LiveTranscriber(
@@ -251,11 +300,64 @@ class Controller:
                 self.live = None
                 raise ApiError(f"Could not start recording: {exc}") from exc
             self.recorder = recorder
+            self._backend = backend
             self.session_dir = session
             self.record_seconds = 0.0
             self.resumed_at = time.time()
             self.paused = False
             self.error = ""
+
+    def audio_test(self, seconds: float = 3.0) -> dict:
+        """Listen briefly to both inputs and report how loud each is, to check the setup."""
+        with self.lock:
+            if self.recorder is not None or self.busy:
+                raise ApiError("Finish the current recording first.")
+            try:
+                backend = get_backend(self.backend_name)
+            except Exception as exc:
+                raise ApiError(str(exc)) from exc
+            sources, problems, _notes = _open_sources(backend, self.cfg)
+            result = {n: {"found": False, "peak": 0.0, "error": m} for n, m in problems.items()}
+            if sources:
+                tmp = Path(tempfile.mkdtemp(prefix="ilfu-test-"))
+                try:
+                    rec = Recorder(sources, tmp)
+                    rec.start()
+                    peaks = dict.fromkeys(sources, 0.0)
+                    end = time.time() + seconds
+                    while time.time() < end:
+                        for name, level in rec.levels().items():
+                            peaks[name] = max(peaks[name], level)
+                        time.sleep(0.05)
+                    rec.stop()
+                finally:
+                    shutil.rmtree(tmp, ignore_errors=True)
+                for name, peak in peaks.items():
+                    result[name] = {"found": True, "peak": round(peak, 3), "error": ""}
+            backend.close()
+            return result
+
+    def devices(self) -> dict:
+        """The microphones and outputs on this computer (a fresh look, so plugged-in ones show)."""
+        try:
+            backend = get_backend(self.backend_name)
+        except Exception as exc:
+            raise ApiError(str(exc)) from exc
+        try:
+            return {
+                "microphones": backend.list_microphones(),
+                "speakers": backend.list_speakers(),
+                "selected": {"mic": self.cfg.mic_device, "speaker": self.cfg.speaker_device},
+            }
+        finally:
+            backend.close()
+
+    def set_devices(self, mic: str, speaker: str) -> None:
+        if self.recorder is not None:
+            raise ApiError("Choose devices before you start recording.")
+        self.cfg.mic_device = mic
+        self.cfg.speaker_device = speaker
+        save(self.cfg)
 
     def _on_segments(self, segs: list[Segment]) -> None:
         with self.lock:
@@ -295,6 +397,7 @@ class Controller:
         def work() -> None:
             try:
                 recorder.stop()
+                self._close_backend()
                 segments = live.stop()
                 self._save_transcript(session, segments)
                 library.write_meta(
@@ -309,6 +412,12 @@ class Controller:
                 self.busy = ""
 
         threading.Thread(target=work, daemon=True, name="ilfu-finish").start()
+
+    def _close_backend(self) -> None:
+        backend, self._backend = self._backend, None
+        if backend is not None:
+            with contextlib.suppress(Exception):
+                backend.close()
 
     @staticmethod
     def _save_transcript(folder: Path, segments: list[Segment]) -> None:
@@ -328,6 +437,7 @@ class Controller:
         if recorder is not None:
             with contextlib.suppress(Exception):
                 recorder.stop()
+            self._close_backend()
             if session is not None:
                 with contextlib.suppress(Exception):
                     library.write_meta(session, duration=round(duration, 1))

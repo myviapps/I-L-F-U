@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import tempfile
 import wave
 from pathlib import Path
 
+from .audio_utils import boosted_copy
 from .transcribe import Transcriber
 from .transcript import Segment
 
@@ -21,11 +23,13 @@ def _has_audio(path: Path) -> bool:
 
 def transcribe_session(session_dir: Path, transcriber: Transcriber) -> list[Segment]:
     segments: list[Segment] = []
-    for name, label in LABELS.items():
-        wav_path = session_dir / f"{name}.wav"
-        if not _has_audio(wav_path):
-            continue
-        for seg in transcriber.transcribe(wav_path):
-            if seg.text.strip():
-                segments.append(Segment(seg.start, seg.end, seg.text, speaker=label))
+    with tempfile.TemporaryDirectory(prefix="ilfu-boost-") as tmp:
+        for name, label in LABELS.items():
+            wav_path = session_dir / f"{name}.wav"
+            if not _has_audio(wav_path):
+                continue
+            audio = boosted_copy(wav_path, Path(tmp) / f"{name}.wav")
+            for seg in transcriber.transcribe(audio):
+                if seg.text.strip():
+                    segments.append(Segment(seg.start, seg.end, seg.text, speaker=label))
     return sorted(segments, key=lambda s: (s.start, s.end))

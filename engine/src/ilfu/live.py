@@ -13,6 +13,7 @@ from array import array
 from collections.abc import Callable
 from pathlib import Path
 
+from .audio_utils import boost_pcm16
 from .capture.base import AudioFormat
 from .capture.recorder import Recorder
 from .session import LABELS
@@ -20,7 +21,7 @@ from .transcribe import Transcriber
 from .transcript import Segment
 
 MAX_CHUNK_SECONDS = 28.0  # Whisper works on windows of up to 30 seconds
-SILENCE_PEAK = 250  # of 32768; chunks quieter than this are skipped
+SILENCE_PEAK = 120  # of 32768; chunks quieter than this are skipped
 
 
 def _is_silent(pcm: bytes) -> bool:
@@ -139,7 +140,7 @@ class LiveTranscriber:
             wav.setnchannels(fmt.channels)
             wav.setsampwidth(fmt.sample_width)
             wav.setframerate(fmt.rate)
-            wav.writeframes(data)
+            wav.writeframes(boost_pcm16(data) if fmt.sample_width == 2 else data)
         label = LABELS.get(name, name)
         return [
             Segment(s.start + offset, s.end + offset, s.text, speaker=label)

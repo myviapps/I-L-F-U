@@ -29,6 +29,8 @@ def _import_pyaudio() -> Any:
 class _WasapiSource(AudioSource):
     def __init__(self, pa: Any, pyaudio: Any, name: str, device: dict[str, Any]) -> None:
         self.name = name
+        # Loopback sends no audio at all while nothing is playing; keep the timeline honest.
+        self.pad_silence = bool(device.get("isLoopbackDevice"))
         self._pa = pa
         self._pyaudio = pyaudio
         self._device = device
@@ -69,14 +71,37 @@ class WindowsBackend(CaptureBackend):
     def _wasapi(self) -> dict[str, Any]:
         return self._pa.get_host_api_info_by_type(self._pyaudio.paWASAPI)
 
-    def _loopback_device(self) -> dict[str, Any]:
-        speakers = self._pa.get_device_info_by_index(self._wasapi()["defaultOutputDevice"])
-        if speakers.get("isLoopbackDevice"):
-            return speakers
+    def _wasapi_devices(self) -> list[dict[str, Any]]:
+        wasapi = self._wasapi()["index"]
+        found = []
+        for i in range(self._pa.get_device_count()):
+            info = self._pa.get_device_info_by_index(i)
+            if info.get("hostApi") == wasapi:
+                found.append(info)
+        return found
+
+    def list_microphones(self) -> list[str]:
+        return [
+            d["name"]
+            for d in self._wasapi_devices()
+            if d["maxInputChannels"] > 0 and not d.get("isLoopbackDevice")
+        ]
+
+    def list_speakers(self) -> list[str]:
+        return [d["name"] for d in self._wasapi_devices() if d["maxOutputChannels"] > 0]
+
+    def _loopback_device(self, device: str | None = None) -> dict[str, Any]:
+        if device:
+            wanted = device
+        else:
+            speakers = self._pa.get_device_info_by_index(self._wasapi()["defaultOutputDevice"])
+            if speakers.get("isLoopbackDevice"):
+                return speakers
+            wanted = speakers["name"]
         for loopback in self._pa.get_loopback_device_info_generator():
-            if speakers["name"] in loopback["name"]:
+            if wanted in loopback["name"]:
                 return loopback
-        raise RuntimeError("No loopback device found for the default speakers")
+        raise RuntimeError(f"No loopback device found for: {wanted}")
 
     def list_devices(self) -> list[str]:
         names = []
@@ -87,9 +112,17 @@ class WindowsBackend(CaptureBackend):
                 names.append(f"{info['name']} ({kind})")
         return names
 
-    def open_system_audio(self) -> AudioSource:
-        return _WasapiSource(self._pa, self._pyaudio, "system", self._loopback_device())
+    def open_system_audio(self, device: str | None = None) -> AudioSource:
+        return _WasapiSource(self._pa, self._pyaudio, "system", self._loopback_device(device))
 
-    def open_microphone(self) -> AudioSource:
-        device = self._pa.get_device_info_by_index(self._wasapi()["defaultInputDevice"])
-        return _WasapiSource(self._pa, self._pyaudio, "mic", device)
+    def open_microphone(self, device: str | None = None) -> AudioSource:
+        if device:
+            for info in self._wasapi_devices():
+                if info["name"] == device and info["maxInputChannels"] > 0:
+                    return _WasapiSource(self._pa, self._pyaudio, "mic", info)
+            raise RuntimeError(f"Microphone not found: {device}")
+        info = self._pa.get_device_info_by_index(self._wasapi()["defaultInputDevice"])
+        return _WasapiSource(self._pa, self._pyaudio, "mic", info)
+
+    def close(self) -> None:
+        self._pa.terminate()

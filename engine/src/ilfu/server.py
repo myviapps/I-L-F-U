@@ -185,6 +185,14 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/language" and method == "POST":
             c.set_language(str(self._body().get("language", "auto")))
             return self._json(c.state())
+        if path == "/api/devices" and method == "GET":
+            return self._json(c.devices())
+        if path == "/api/devices" and method == "POST":
+            b = self._body()
+            c.set_devices(str(b.get("mic", "")), str(b.get("speaker", "")))
+            return self._json(c.devices())
+        if path == "/api/audio-test" and method == "POST":
+            return self._json(c.audio_test())
         if path == "/api/uninstall" and method == "POST":
             from .uninstall import launch_uninstaller
 

@@ -118,3 +118,29 @@ def test_settings_page_and_dark_mode_render(page, make_controller):
     finally:
         srv.shutdown()
         srv.server_close()
+
+
+def test_device_pickers_and_audio_test(page, make_controller):
+    c = make_controller()
+    srv = _serve(c)
+    try:
+        page.goto(srv.url)
+        page.click("#testAudio")
+        page.wait_for_selector("text=Audio test", timeout=15000)
+        assert page.locator("text=Working").count() == 2  # fake microphone and call sound
+        page.click("#ok")
+        page.click("#settingsBtn")
+        page.wait_for_selector("#sMic option:has-text('Fake headset microphone')", state="attached")
+        page.select_option("#sMic", "Fake headset microphone")
+        page.select_option("#sSpk", "Fake headset")
+        page.click("#sApply")
+        page.wait_for_function("true")
+        for _ in range(50):
+            if c.cfg.mic_device:
+                break
+            page.wait_for_timeout(100)
+        assert c.cfg.mic_device == "Fake headset microphone" and c.cfg.speaker_device == "Fake headset"
+        assert not page.errors, page.errors
+    finally:
+        srv.shutdown()
+        srv.server_close()

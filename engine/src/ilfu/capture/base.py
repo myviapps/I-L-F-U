@@ -25,6 +25,9 @@ class AudioSource(ABC):
 
     name: str
     format: AudioFormat
+    # Windows loopback delivers nothing while the computer is silent. Sources like that set this
+    # so the recorder fills the gaps with silence and the tracks stay in step with the clock.
+    pad_silence: bool = False
 
     @abstractmethod
     def start(self, callback: FrameCallback) -> None:
@@ -42,10 +45,21 @@ class CaptureBackend(ABC):
     def list_devices(self) -> list[str]:
         """Human-readable device names, for `ilfu devices`."""
 
-    @abstractmethod
-    def open_system_audio(self) -> AudioSource:
-        """What the user hears (the call's other participants)."""
+    def list_microphones(self) -> list[str]:
+        """Names of microphones the user can pick. Empty when the OS cannot say."""
+        return []
+
+    def list_speakers(self) -> list[str]:
+        """Names of outputs whose sound can be captured (speakers, headphones, headsets)."""
+        return []
 
     @abstractmethod
-    def open_microphone(self) -> AudioSource:
-        """What the user says."""
+    def open_system_audio(self, device: str | None = None) -> AudioSource:
+        """What the user hears (the call's other participants). None means the OS default."""
+
+    @abstractmethod
+    def open_microphone(self, device: str | None = None) -> AudioSource:
+        """What the user says. None means the OS default."""
+
+    def close(self) -> None:
+        """Release the audio system. Called when recording is over."""

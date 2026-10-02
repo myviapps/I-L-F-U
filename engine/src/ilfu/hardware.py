@@ -71,3 +71,8 @@ def choose_tier(hw: Hardware) -> Tier:
     if hw.cpu_cores >= 4 and hw.ram_gb >= 8:
         return Tier("light", "small", "int8", "cpu", live_captions=True)
     return Tier("minimal", "base", "int8", "cpu", live_captions=False)
+
+
+def default_cpu_threads(cores: int) -> int:
+    """Use about half the cores for transcription so a video call keeps its share."""
+    return max(1, min(8, (cores + 1) // 2))
