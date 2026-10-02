@@ -8,8 +8,8 @@ import pytest
 
 sync_api = pytest.importorskip("playwright.sync_api")
 
-from ilfu import models
-from ilfu.server import IlfuServer
+from ilfu import models  # noqa: E402
+from ilfu.server import IlfuServer  # noqa: E402
 
 
 def _chromium():
