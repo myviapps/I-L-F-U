@@ -51,6 +51,7 @@ def _cmd_benchmark(args: argparse.Namespace) -> int:
         args.frozen.parent.mkdir(parents=True, exist_ok=True)
         args.frozen.write_text(json.dumps(current, indent=1, sort_keys=True), encoding="utf-8")
         print(f"No frozen list yet: wrote {args.frozen}. Commit it so the set stays fixed.")
+        print("FROZEN-LIST-BEGIN\n" + args.frozen.read_text(encoding="utf-8") + "\nFROZEN-LIST-END")
     if args.count < benchmark.FROZEN_COUNT:  # a quick run uses the first clips of the frozen set
         seen: dict[str, int] = {}
         quick = []
@@ -69,6 +70,9 @@ def _cmd_benchmark(args: argparse.Namespace) -> int:
     args.out.write_text(json.dumps(report, indent=2), encoding="utf-8")
     markdown = benchmark.to_markdown(report)
     print(markdown)
+    for tag, rows in report.get("samples", {}).items():
+        for row in rows:
+            print(f"[{tag}] reference: {row['reference']}\n[{tag}] heard:     {row['heard']}")
     if args.summary:
         with args.summary.open("a", encoding="utf-8") as handle:
             handle.write(markdown)

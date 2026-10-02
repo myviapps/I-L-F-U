@@ -126,6 +126,7 @@ def run(items: list[Item], transcriber: Transcriber, model: str) -> dict:
         by_tag.setdefault(item.tag, []).append(item)
     pairs_all: list[tuple[str, str]] = []
     wer_by_tag: dict[str, float] = {}
+    samples: dict[str, list[dict[str, str]]] = {}
     audio_seconds = work_seconds = 0.0
     for tag, group in sorted(by_tag.items()):
         transcriber.language = LANGUAGES[tag][1]  # type: ignore[attr-defined]
@@ -136,6 +137,8 @@ def run(items: list[Item], transcriber: Transcriber, model: str) -> dict:
             work_seconds += time.perf_counter() - started
             audio_seconds += _seconds(item.audio)
             pairs.append((item.reference, text))
+            if len(samples.setdefault(tag, [])) < 3:
+                samples[tag].append({"reference": item.reference, "heard": text})
         wer_by_tag[tag] = corpus_wer(pairs).wer
         pairs_all += pairs
     report = {
@@ -143,6 +146,7 @@ def run(items: list[Item], transcriber: Transcriber, model: str) -> dict:
         "clips": len(items),
         "wer": corpus_wer(pairs_all).wer,
         "wer_by_tag": wer_by_tag,
+        "samples": samples,
         "audio_seconds": round(audio_seconds, 1),
         "seconds_to_transcribe": round(work_seconds, 1),
         # below 1.0 means faster than real time, which live captions need
