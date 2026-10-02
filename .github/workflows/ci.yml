@@ -27,13 +27,7 @@ jobs:
       - name: Lint
         run: ruff check .
       - name: Test
-        if: runner.os != 'Linux'
         run: pytest
-      - name: Test (with a virtual screen so the window tests run)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update -q && sudo apt-get install -y -q xvfb python3-tk
-          xvfb-run -a pytest
 
   windows-installer:
     name: Windows install, run, uninstall
@@ -74,7 +68,7 @@ jobs:
           & "$dir\venv\Scripts\ilfu.exe" setup --model base --accept-terms --save-dir "$env:RUNNER_TEMP\ilfu-data"
           if ($LASTEXITCODE -ne 0) { throw 'setup failed' }
           if (-not (Test-Path "$dir\config.json")) { throw 'config not saved' }
-      - name: Window flow (record, pause, stop, live captions, history) with the real model
+      - name: "App flow with the real model and a fake audio source (record, pause, stop, history)"
         shell: powershell
         run: |
           $dir = Join-Path $env:LOCALAPPDATA 'ILFU'
@@ -96,6 +90,22 @@ jobs:
           $lnk = Join-Path ([Environment]::GetFolderPath('Programs')) 'I-L-F-U Call Transcriber.lnk'
           if (Test-Path $lnk) { throw 'shortcut still exists' }
           Write-Host 'Uninstall left nothing behind'
+
+  web-ui:
+    name: Web interface in a real browser
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install -e "engine[dev]" playwright
+          python -m playwright install --with-deps chromium
+      - name: Browser tests (setup wizard, record, captions, history, rename, delete)
+        working-directory: engine
+        run: pytest tests/test_web_ui.py -v
 
   speech-smoke:
     name: Real speech model smoke test

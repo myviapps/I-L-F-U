@@ -84,7 +84,7 @@ def _cmd_transcribe(args: argparse.Namespace) -> int:
 def _cmd_gui(args: argparse.Namespace) -> int:
     from .gui import main as gui_main
 
-    return gui_main(args.backend)
+    return gui_main(args.backend, show_window=not args.no_window)
 
 
 def _cmd_uninstall(args: argparse.Namespace) -> int:
@@ -130,7 +130,9 @@ def build_parser() -> argparse.ArgumentParser:
     su.add_argument("--accept-terms", action="store_true")
     su.set_defaults(run=_cmd_setup)
 
-    sub.add_parser("gui", help="open the desktop window").set_defaults(run=_cmd_gui)
+    gui = sub.add_parser("gui", help="open the app window")
+    gui.add_argument("--no-window", action="store_true", help="only print the address")
+    gui.set_defaults(run=_cmd_gui)
     sub.add_parser("uninstall", help="remove the app (Windows installer)").set_defaults(
         run=_cmd_uninstall
     )

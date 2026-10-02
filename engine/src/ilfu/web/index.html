@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>I-L-F-U Call Transcriber</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234f46e5'/%3E%3Crect x='12' y='7' width='8' height='12' rx='4' fill='white'/%3E%3Cpath d='M9 16a7 7 0 0 0 14 0M16 23v3' stroke='white' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#f6f7fb; --surface:#fff; --surface-2:#f1f3f9; --border:#e4e7ef; --text:#111827; --muted:#6b7280;
+  --primary:#4f46e5; --primary-600:#4338ca; --primary-50:#eef2ff; --danger:#dc2626; --danger-50:#fef2f2;
+  --ok:#059669; --ok-50:#ecfdf5; --warn:#b45309; --warn-50:#fffbeb;
+  --shadow:0 1px 2px rgba(16,24,40,.05),0 1px 3px rgba(16,24,40,.08); --shadow-lg:0 12px 32px rgba(16,24,40,.16);
+  --radius:14px; --font:Inter,"Segoe UI Variable","Segoe UI",system-ui,-apple-system,Roboto,"Noto Sans","Noto Sans Devanagari","Noto Sans Telugu",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0b0f19; --surface:#131827; --surface-2:#1a2033; --border:#252c42; --text:#e8ebf4; --muted:#9aa3b8;
+  --primary:#818cf8; --primary-600:#6366f1; --primary-50:#1e2247; --danger:#f87171; --danger-50:#2a1618;
+  --ok:#34d399; --ok-50:#10261f; --warn:#fbbf24; --warn-50:#2a2110; --shadow:0 1px 2px rgba(0,0,0,.4); --shadow-lg:0 12px 32px rgba(0,0,0,.5);
+}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font:14px/1.5 var(--font);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3,p{margin:0}
+.app{display:grid;grid-template-columns:300px 1fr;height:100vh}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0}
+.brand{display:flex;align-items:center;gap:10px;padding:18px 18px 12px}
+.logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:grid;place-items:center;color:#fff;flex:none}
+.brand b{display:block;font-size:15px;letter-spacing:-.01em}.brand span{color:var(--muted);font-size:12px}
+.side-actions{padding:6px 14px 10px;display:grid;gap:10px}
+.search{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)}
+.list{flex:1;overflow:auto;padding:0 10px 10px}
+.group{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:14px 8px 6px}
+.item{display:flex;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;border-radius:10px;padding:9px 10px;cursor:pointer}
+.item:hover{background:var(--surface-2)}.item.active{background:var(--primary-50)}
+.item .t{flex:1;min-width:0}.item .t b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .t small{color:var(--muted)}.item .d{color:var(--muted);font-variant-numeric:tabular-nums;font-size:12px}
+.empty-list{padding:28px 14px;text-align:center;color:var(--muted)}
+.side-foot{border-top:1px solid var(--border);padding:12px 14px;display:flex;align-items:center;gap:8px;justify-content:space-between}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:500;background:var(--surface-2);color:var(--muted)}
+.pill i{width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.pill.ok{background:var(--ok-50);color:var(--ok)}.pill.ok i{background:var(--ok)}
+.pill.warn{background:var(--warn-50);color:var(--warn)}.pill.warn i{background:var(--warn);animation:pulse 1.2s infinite}
+.pill.bad{background:var(--danger-50);color:var(--danger)}.pill.bad i{background:var(--danger)}
+.main{overflow:auto;min-width:0}
+.page{max-width:900px;margin:0 auto;padding:32px 36px 60px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--border);background:var(--surface);border-radius:10px;padding:9px 14px;font-weight:600;cursor:pointer;box-shadow:var(--shadow);transition:.12s}
+.btn:hover{background:var(--surface-2)}.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}.btn.primary:hover{background:var(--primary-600)}
+.btn.danger{color:var(--danger)}.btn.danger.solid{background:var(--danger);border-color:var(--danger);color:#fff}
+.btn.rec{background:var(--danger);border-color:var(--danger);color:#fff;padding:14px 26px;font-size:15px;border-radius:12px}
+.btn.rec:hover{filter:brightness(.93);background:var(--danger)}
+.btn.ghost{background:none;border-color:transparent;box-shadow:none;color:var(--muted)}.btn.ghost:hover{background:var(--surface-2);color:var(--text)}
+.btn.block{width:100%}.btn.sm{padding:6px 10px;font-size:13px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+.pad{padding:22px}
+.hero{text-align:center;padding:56px 24px 44px}
+.mic{width:84px;height:84px;border-radius:50%;margin:0 auto 22px;display:grid;place-items:center;background:var(--primary-50);color:var(--primary)}
+.hero h1{font-size:28px;letter-spacing:-.02em;margin-bottom:8px}
+.hero p{color:var(--muted);max-width:520px;margin:0 auto 26px;font-size:15px}
+.hero .row{display:flex;gap:12px;justify-content:center;align-items:center;flex-wrap:wrap}
+.select,.input{border:1px solid var(--border);background:var(--surface);border-radius:10px;padding:10px 12px;min-width:200px}
+.select:focus,.input:focus,.search:focus{outline:2px solid var(--primary);outline-offset:-1px}
+.features{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:18px}
+.feature{padding:18px}.feature b{display:block;margin-bottom:4px}.feature span{color:var(--muted);font-size:13px}
+.livehead{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:20px 22px}
+.dot{width:12px;height:12px;border-radius:50%;background:var(--danger);animation:pulse 1.2s infinite;flex:none}
+.dot.paused{background:var(--warn);animation:none}
+.timer{font-size:34px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.bars{display:flex;gap:3px;align-items:center;height:30px;flex:1;min-width:80px}
+.bars i{width:4px;border-radius:2px;background:var(--primary);height:6px;animation:bar 1s ease-in-out infinite}
+.bars.paused i{animation:none;opacity:.35}
+.spacer{flex:1}
+.banner{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:12px;margin-bottom:14px;background:var(--warn-50);color:var(--warn);font-weight:500}
+.banner.bad{background:var(--danger-50);color:var(--danger)}.banner.info{background:var(--primary-50);color:var(--primary)}
+.section-title{display:flex;align-items:center;justify-content:space-between;margin:22px 2px 10px}
+.section-title h2{font-size:15px}
+.captions{max-height:46vh;overflow:auto;padding:6px 8px}
+.line{display:flex;gap:12px;padding:10px 12px;border-radius:10px;align-items:flex-start}
+.line:hover{background:var(--surface-2)}.line.now{background:var(--primary-50)}
+.ts{color:var(--muted);font-variant-numeric:tabular-nums;font-size:12px;padding-top:3px;min-width:52px;background:none;border:0;cursor:pointer;text-align:left}
+.ts:hover{color:var(--primary)}
+.who{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;margin-top:2px;flex:none;height:fit-content}
+.who.You{background:var(--primary-50);color:var(--primary)}.who.Them{background:var(--ok-50);color:var(--ok)}
+.txt{flex:1;font-size:15px;line-height:1.6}
+.placeholder{color:var(--muted);text-align:center;padding:40px 16px}
+.head{display:flex;gap:14px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;margin-bottom:18px}
+.title{font-size:26px;font-weight:700;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+.title button{opacity:0}.title:hover button{opacity:1}
+.title-input{font-size:24px;font-weight:700;border:1px solid var(--primary);border-radius:10px;padding:2px 8px;background:var(--surface);width:100%;max-width:520px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.chip{background:var(--surface-2);color:var(--muted);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:500}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+audio{width:100%;height:44px}
+.menu{position:relative}.menu-pop{position:absolute;right:0;top:calc(100% + 6px);background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-lg);padding:6px;min-width:190px;z-index:20}
+.menu-pop a{display:block;padding:8px 12px;border-radius:8px;color:var(--text);text-decoration:none;font-weight:500}.menu-pop a:hover{background:var(--surface-2)}
+.tsearch{margin:0 0 10px}
+mark{background:#fde68a;color:#111;border-radius:3px}
+.set-row{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:18px 22px;border-top:1px solid var(--border)}
+.set-row:first-child{border-top:0}.set-row h3{font-size:14px}.set-row p{color:var(--muted);font-size:13px;margin-top:2px;max-width:480px}
+.models{display:grid;gap:10px;padding:0 22px 20px}
+.model{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--border);border-radius:12px;padding:12px 14px;cursor:pointer;background:var(--surface)}
+.model:hover{border-color:var(--primary)}.model.sel{border-color:var(--primary);background:var(--primary-50)}
+.model input{margin-top:4px;accent-color:var(--primary)}
+.model b{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.model small{color:var(--muted);display:block;margin-top:2px}
+.tag{font-size:11px;padding:1px 8px;border-radius:999px;background:var(--ok-50);color:var(--ok);font-weight:600}
+.tag.rec{background:var(--primary-50);color:var(--primary)}
+.overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:grid;place-items:center;z-index:50;padding:20px;backdrop-filter:blur(3px)}
+.overlay.solid{background:var(--bg);backdrop-filter:none}
+.dialog{background:var(--surface);border-radius:18px;box-shadow:var(--shadow-lg);width:100%;max-width:440px;padding:26px}
+.dialog h2{font-size:19px;margin-bottom:8px}.dialog p{color:var(--muted)}
+.dialog .foot{display:flex;gap:10px;justify-content:flex-end;margin-top:22px}
+.wizard{width:100%;max-width:720px;max-height:96vh;display:flex;flex-direction:column}
+.steps{display:flex;gap:8px;margin-bottom:22px}
+.steps i{flex:1;height:5px;border-radius:3px;background:var(--border)}.steps i.on{background:var(--primary)}
+.wiz-body{overflow:auto;padding:2px}
+.wiz-body h1{font-size:24px;letter-spacing:-.02em;margin-bottom:6px}.wiz-body>p{color:var(--muted);margin-bottom:16px}
+.terms{max-height:260px;overflow:auto;white-space:pre-wrap;background:var(--surface-2);border-radius:12px;padding:14px 16px;font-size:13px;line-height:1.6}
+.check{display:flex;gap:10px;align-items:center;margin-top:14px;font-weight:500}
+.check input{width:18px;height:18px;accent-color:var(--primary)}
+.wiz-foot{display:flex;justify-content:space-between;margin-top:20px;gap:10px}
+.field{margin-bottom:16px}.field label{display:block;font-weight:600;margin-bottom:6px}.field small{color:var(--muted);display:block;margin-top:6px}
+.field label.model{display:flex;font-weight:400;margin:0}
+.field .row{display:flex;gap:8px}.field .row .input{flex:1}
+.progress{height:12px;border-radius:7px;background:var(--surface-2);overflow:hidden;margin:18px 0 10px}
+.progress i{display:block;height:100%;background:linear-gradient(90deg,#6366f1,#8b5cf6);width:0;transition:width .4s}
+.toasts{position:fixed;right:18px;bottom:18px;display:grid;gap:10px;z-index:80}
+.toast{background:var(--text);color:var(--bg);padding:11px 16px;border-radius:12px;box-shadow:var(--shadow-lg);max-width:380px;font-weight:500;animation:in .2s}
+.toast.bad{background:var(--danger);color:#fff}
+.spin{width:16px;height:16px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite;display:inline-block}
+@keyframes pulse{50%{opacity:.35}}@keyframes spin{to{transform:rotate(360deg)}}@keyframes in{from{transform:translateY(8px);opacity:0}}
+@keyframes bar{0%,100%{height:6px}50%{height:26px}}
+@media (max-width:820px){.app{grid-template-columns:1fr;grid-template-rows:auto 1fr;height:auto;min-height:100vh}.sidebar{max-height:42vh}.features{grid-template-columns:1fr}.page{padding:20px 16px 50px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"/><path d="M19 11a7 7 0 0 1-14 0M12 18v3"/></svg></div><div><b>I-L-F-U</b><span>Call Transcriber</span></div></div>
+    <div class="side-actions">
+      <button class="btn primary block" id="newBtn">＋ New recording</button>
+      <input class="search" id="search" placeholder="Search recordings" aria-label="Search recordings">
+    </div>
+    <div class="list" id="list"></div>
+    <div class="side-foot"><span class="pill" id="modelPill"><i></i><span>…</span></span><button class="btn ghost sm" id="settingsBtn">⚙ Settings</button></div>
+  </aside>
+  <main class="main"><div class="page" id="view"></div></main>
+</div>
+<div id="overlay"></div>
+<div class="toasts" id="toasts"></div>
+<script>
+"use strict";
+const $ = (s, r=document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = sec => { sec = Math.max(0, Math.floor(sec)); const h = Math.floor(sec/3600), m = Math.floor(sec%3600/60), s = sec%60; return (h? h+":"+String(m).padStart(2,"0") : String(m).padStart(2,"0")) + ":" + String(s).padStart(2,"0"); };
+const MIC = '<svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"/><path d="M19 11a7 7 0 0 1-14 0M12 18v3"/></svg>';
+
+const S = { st: null, cat: null, sessions: [], view: "home", sid: null, detail: null, filter: "", segs: [], lastFinished: null, busyWas: "", poll: null, setup: {step: 0, accept: false, dir: "", lang: "auto", model: ""}, settingsDraft: null };
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, { method: opts.method || "GET", headers: {"Content-Type": "application/json"}, body: opts.body ? JSON.stringify(opts.body) : undefined });
+  let data = {}; try { data = await res.json(); } catch (e) {}
+  if (!res.ok) throw new Error(data.error || ("Request failed (" + res.status + ")"));
+  return data;
+}
+function toast(msg, bad) { const el = document.createElement("div"); el.className = "toast" + (bad ? " bad" : ""); el.textContent = msg; $("#toasts").append(el); setTimeout(() => el.remove(), bad ? 7000 : 3500); }
+const guard = fn => async (...a) => { try { return await fn(...a); } catch (e) { toast(e.message, true); } };
+
+/* ---------- list ---------- */
+function groupOf(created) { const d = new Date(created.replace(/(\d+) (\w+) (\d+), (\d+:\d+)/, "$2 $1 $3 $4")); const now = new Date(); const day = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime(); const diff = (day(now) - day(d)) / 864e5; if (isNaN(diff)) return "Earlier"; return diff < 1 ? "Today" : diff < 2 ? "Yesterday" : diff < 7 ? "This week" : "Earlier"; }
+function renderList() {
+  const q = S.filter.toLowerCase(); const el = $("#list");
+  const items = S.sessions.filter(s => !q || s.title.toLowerCase().includes(q));
+  if (!items.length) { el.innerHTML = '<div class="empty-list">' + (S.sessions.length ? "No recordings match your search." : "No recordings yet.<br>Your calls will show up here.") + "</div>"; return; }
+  let html = "", last = "";
+  for (const s of items) { const g = groupOf(s.created); if (g !== last) { html += '<div class="group">' + g + "</div>"; last = g; }
+    html += '<button class="item ' + (S.view === "detail" && S.sid === s.id ? "active" : "") + '" data-id="' + esc(s.id) + '"><div class="t"><b>' + esc(s.title) + "</b><small>" + esc(s.created) + '</small></div><span class="d">' + fmt(s.duration) + "</span></button>"; }
+  el.innerHTML = html;
+  el.querySelectorAll(".item").forEach(b => b.onclick = () => openSession(b.dataset.id));
+}
+const loadSessions = guard(async () => { S.sessions = await api("/api/sessions"); renderList(); });
+
+/* ---------- views ---------- */
+function go(view, sid) { S.view = view; S.sid = sid || null; if (view !== "detail") S.detail = null; render(); renderList(); $(".main").scrollTop = 0; }
+const openSession = guard(async id => { S.sid = id; S.view = "detail"; S.detail = await api("/api/sessions/" + encodeURIComponent(id)); S.tfilter = ""; render(); renderList(); $(".main").scrollTop = 0; });
+
+function langOptions(sel) { return S.cat.languages.map(l => '<option value="' + l.code + '"' + (l.code === sel ? " selected" : "") + ">" + esc(l.name) + "</option>").join(""); }
+
+function render() {
+  if (!S.st || !S.cat) return;
+  const v = $("#view");
+  if (S.st.recording || S.st.busy === "finishing") return renderRecording(v);
+  if (S.view === "detail" && S.detail) return renderDetail(v);
+  if (S.view === "settings") return renderSettings(v);
+  renderHome(v);
+}
+
+function renderHome(v) {
+  const st = S.st, ready = st.model_state === "ready";
+  v.innerHTML = '<div class="card hero"><div class="mic">' + MIC + '</div><h1>Ready when you are</h1><p>Start your call, then press record. You get live captions and a clean transcript. Everything stays on this computer.</p>' +
+    '<div class="row"><select class="select" id="lang" aria-label="Language">' + langOptions(st.config.language) + '</select><button class="btn rec" id="rec">● Start recording</button></div>' +
+    (ready ? "" : '<p style="margin:18px auto 0;font-size:13px">' + (st.model_state === "error" ? "The speech model could not be loaded: " + esc(st.model_error) : "Loading the speech model… you can start recording now, captions begin when it is ready.") + "</p>") + "</div>" +
+    '<div class="features"><div class="card feature"><b>Live captions</b><span>Words appear while people speak, labelled You and Them.</span></div><div class="card feature"><b>Private by design</b><span>No account, no upload. Audio never leaves your computer.</span></div><div class="card feature"><b>Many languages</b><span>Hindi, Telugu, Tamil and more. Pick yours for the best result.</span></div></div>';
+  $("#lang").onchange = guard(async e => { await api("/api/language", {method: "POST", body: {language: e.target.value}}); });
+  $("#rec").onclick = confirmRecord;
+}
+
+function confirmRecord() {
+  overlay('<div class="dialog" role="dialog" aria-modal="true"><h2>Before you record</h2><p>Tell everyone on the call that you are recording, and make sure that is allowed where you and they live and by your meeting platform.</p><p style="margin-top:10px">Audio stays on this computer.</p><div class="foot"><button class="btn" id="no">Cancel</button><button class="btn rec" id="yes" style="padding:10px 18px">Start recording</button></div></div>');
+  $("#no").onclick = closeOverlay;
+  $("#yes").onclick = guard(async () => { closeOverlay(); S.segs = []; S.st = await api("/api/record/start", {method: "POST"}); S.segCount = 0; render(); schedulePoll(); });
+}
+
+function renderRecording(v) {
+  const st = S.st;
+  if (!$("#livebox")) {
+    const bars = Array.from({length: 28}, (_, i) => '<i style="animation-delay:' + (i * 0.07).toFixed(2) + 's"></i>').join("");
+    v.innerHTML = '<div id="banners"></div><div class="card"><div class="livehead"><span class="dot" id="ldot"></span><div><div style="font-weight:600" id="lstate">Recording</div><div class="timer" id="ltimer">00:00</div></div><div class="bars" id="lbars">' + bars + '</div><div class="actions"><button class="btn" id="lpause">⏸ Pause</button><button class="btn danger solid" id="lstop">■ Stop</button></div></div></div>' +
+      '<div class="section-title"><h2>Live captions</h2><span class="pill" id="lcount"><i></i><span>0 lines</span></span></div><div class="card"><div class="captions" id="livebox" aria-live="polite"></div></div>';
+    $("#lpause").onclick = guard(async () => { S.st = await api("/api/record/" + (S.st.paused ? "resume" : "pause"), {method: "POST"}); updateLive(); });
+    $("#lstop").onclick = guard(async () => { $("#lstop").disabled = true; S.st = await api("/api/record/stop", {method: "POST"}); S.liveSegs = S.segs; render(); schedulePoll(); });
+    fillLive(true);
+  }
+  updateLive();
+}
+function fillLive(all) {
+  const box = $("#livebox"); if (!box) return;
+  if (all) box.innerHTML = "";
+  if (!S.segs.length) { box.innerHTML = '<div class="placeholder">Captions will appear here as people speak.<br>You can switch back to your call now.</div>'; box.dataset.empty = "1"; return; }
+  if (box.dataset.empty) { box.innerHTML = ""; delete box.dataset.empty; }
+  const stick = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+  const from = box.children.length;
+  for (const s of S.segs.slice(from)) box.insertAdjacentHTML("beforeend", lineHtml(s));
+  if (stick) box.scrollTop = box.scrollHeight;
+}
+function lineHtml(s, extra) { return '<div class="line"' + (extra || "") + '><button class="ts" data-t="' + s.start + '">' + fmt(s.start) + "</button>" + (s.speaker ? '<span class="who ' + s.speaker + '">' + s.speaker + "</span>" : "") + '<div class="txt">' + esc(s.text) + "</div></div>"; }
+function updateLive() {
+  const st = S.st; if (!$("#ltimer")) return;
+  if (st.busy === "finishing") { $("#lstate").textContent = "Saving…"; $("#lpause").disabled = true; $("#lstop").disabled = true; }
+  else { $("#lstate").textContent = st.paused ? "Paused" : "Recording"; $("#lpause").textContent = st.paused ? "▶ Resume" : "⏸ Pause"; }
+  $("#ldot").className = "dot" + (st.paused || st.busy ? " paused" : ""); $("#lbars").className = "bars" + (st.paused || st.busy ? " paused" : "");
+  $("#ltimer").textContent = fmt(st.elapsed); $("#lcount span").textContent = S.segs.length + (S.segs.length === 1 ? " line" : " lines");
+  const b = [];
+  if (st.model_state !== "ready" && st.model_state !== "error") b.push('<div class="banner info"><span class="spin"></span><span>Loading the speech model. Captions start when it is ready. Your audio is being recorded.</span></div>');
+  if (st.model_state === "error") b.push('<div class="banner bad">The speech model could not be loaded, so there are no live captions. Recording continues. Use Re-transcribe afterwards.</div>');
+  if (st.live_error) b.push('<div class="banner bad">Live captions stopped (' + esc(st.live_error) + "). Recording continues. Use Re-transcribe afterwards.</div>");
+  else if (st.lag > 15 && st.model_state === "ready") b.push('<div class="banner">Captions are about ' + Math.round(st.lag) + " seconds behind. A smaller speech model keeps up better (Settings). The recording is not affected.</div>");
+  const html = b.join(""); if ($("#banners").dataset.h !== html) { $("#banners").innerHTML = html; $("#banners").dataset.h = html; }
+}
+
+function renderDetail(v) {
+  const d = S.detail, st = S.st, mine = st.busy === "retranscribing" && st.busy_id === d.id;
+  const chips = [d.created, fmt(d.duration) + " long", d.language && d.language !== "auto" ? (S.cat.languages.find(l => l.code === d.language) || {name: d.language}).name : "", d.model ? "Model: " + d.model : ""].filter(Boolean).map(c => '<span class="chip">' + esc(c) + "</span>").join("");
+  v.innerHTML = '<div class="head"><div style="min-width:0;flex:1"><div class="title" id="titleBox"><span id="titleText">' + esc(d.title) + '</span><button class="btn ghost sm" id="editTitle" title="Rename" aria-label="Rename">✎</button></div><div class="chips">' + chips + '</div></div>' +
+    '<div class="actions"><button class="btn" id="retr"' + (st.busy || st.recording ? " disabled" : "") + '>↻ Re-transcribe</button><button class="btn" id="copy">⧉ Copy</button><div class="menu"><button class="btn" id="exp">⇩ Export ▾</button></div><button class="btn danger" id="del">🗑 Delete</button></div></div>' +
+    (mine ? '<div class="banner info"><span class="spin"></span><span>Re-transcribing with full accuracy. This can take a few minutes for long calls.</span></div>' : "") +
+    (d.playable ? '<div class="card pad" style="margin-bottom:18px"><audio id="audio" controls preload="metadata" src="/audio/' + encodeURIComponent(d.id) + '"></audio></div>' : "") +
+    '<div class="section-title"><h2>Transcript</h2></div>' + (d.segments.length ? '<input class="search tsearch" id="tsearch" placeholder="Search in this transcript" aria-label="Search in this transcript">' : "") +
+    '<div class="card"><div class="captions" id="tbox" style="max-height:none"></div></div>';
+  fillTranscript();
+  $("#editTitle").onclick = startRename; $("#titleText").onclick = startRename;
+  $("#retr").onclick = guard(async () => { S.st = await api("/api/sessions/" + encodeURIComponent(d.id) + "/retranscribe", {method: "POST"}); render(); schedulePoll(); });
+  $("#copy").onclick = () => { const t = d.segments.map(s => "[" + fmt(s.start) + "] " + (s.speaker ? s.speaker + ": " : "") + s.text).join("\n"); navigator.clipboard.writeText(t).then(() => toast("Copied to the clipboard"), () => toast("Could not copy", true)); };
+  $("#exp").onclick = e => { e.stopPropagation(); const m = $(".menu"); if ($(".menu-pop")) return $(".menu-pop").remove(); m.insertAdjacentHTML("beforeend", '<div class="menu-pop">' + [["md","Markdown (.md)"],["txt","Plain text (.txt)"],["srt","Subtitles (.srt)"]].map(([f,n]) => '<a href="/api/sessions/' + encodeURIComponent(d.id) + "/export?fmt=" + f + '" download>' + n + "</a>").join("") + "</div>"); };
+  $("#del").onclick = () => confirmDelete(d);
+  const ts = $("#tsearch"); if (ts) ts.oninput = () => { S.tfilter = ts.value; fillTranscript(); };
+  const au = $("#audio"); if (au) au.ontimeupdate = () => { const t = au.currentTime; let n = null; document.querySelectorAll("#tbox .line").forEach(l => { const on = +l.dataset.s <= t && (!l.nextElementSibling || +l.nextElementSibling.dataset.s > t); l.classList.toggle("now", on && !au.paused); if (on) n = l; }); };
+}
+document.addEventListener("click", () => { const p = $(".menu-pop"); if (p) p.remove(); });
+function fillTranscript() {
+  const d = S.detail, box = $("#tbox"); if (!box) return;
+  if (!d.segments.length) { box.innerHTML = '<div class="placeholder">' + (d.has_transcript ? "No speech was found." : "There is no transcript yet.") + '<br>Use <b>Re-transcribe</b> to create one from the audio.</div>'; return; }
+  const q = (S.tfilter || "").toLowerCase();
+  const rows = d.segments.filter(s => !q || s.text.toLowerCase().includes(q));
+  box.innerHTML = rows.length ? rows.map(s => lineHtml(s, ' data-s="' + s.start + '"').replace(esc(s.text), q ? esc(s.text).replace(new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/[&<>"']/g, c => "&#" + c.charCodeAt(0) + ";"), "gi"), m => "<mark>" + m + "</mark>") : esc(s.text))).join("") : '<div class="placeholder">No matches.</div>';
+  box.querySelectorAll(".ts").forEach(b => b.onclick = () => { const au = $("#audio"); if (au) { au.currentTime = +b.dataset.t; au.play(); } });
+}
+function startRename() {
+  const d = S.detail; const box = $("#titleBox");
+  box.innerHTML = '<input class="title-input" id="ti" maxlength="120" value="' + esc(d.title) + '">'; const ti = $("#ti"); ti.focus(); ti.select();
+  const done = guard(async save => { if (save && ti.value.trim() && ti.value.trim() !== d.title) { await api("/api/sessions/" + encodeURIComponent(d.id) + "/rename", {method: "POST", body: {title: ti.value}}); toast("Renamed"); await loadSessions(); S.detail = await api("/api/sessions/" + encodeURIComponent(d.id)); } render(); });
+  ti.onkeydown = e => { if (e.key === "Enter") done(true); if (e.key === "Escape") done(false); }; ti.onblur = () => done(true);
+}
+function confirmDelete(d) {
+  overlay('<div class="dialog" role="dialog" aria-modal="true"><h2>Delete this recording?</h2><p><b>' + esc(d.title) + "</b> with its audio and transcript will be removed from this computer. This cannot be undone.</p>" + '<div class="foot"><button class="btn" id="no">Keep it</button><button class="btn danger solid" id="yes">Delete</button></div></div>');
+  $("#no").onclick = closeOverlay;
+  $("#yes").onclick = guard(async () => { await api("/api/sessions/" + encodeURIComponent(d.id), {method: "DELETE"}); closeOverlay(); toast("Recording deleted"); await loadSessions(); go("home"); });
+}
+
+/* ---------- settings ---------- */
+function renderSettings(v) {
+  const st = S.st, c = st.config;
+  if (!S.settingsDraft) S.settingsDraft = { model: c.model, dir: c.save_dir, lang: c.language };
+  const dr = S.settingsDraft, dl = st.download;
+  const models = S.cat.models.map(m => '<label class="model ' + (dr.model === m.name ? "sel" : "") + '"><input type="radio" name="model" value="' + m.name + '"' + (dr.model === m.name ? " checked" : "") + '><div><b>' + esc(m.label) + " · " + m.size_mb + " MB" + (m.name === c.model ? '<span class="tag">In use</span>' : m.downloaded ? '<span class="tag">Downloaded</span>' : "") + (m.recommended ? '<span class="tag rec">Recommended</span>' : "") + "</b><small>" + esc(m.note) + "</small></div></label>").join("");
+  v.innerHTML = '<div class="head"><div><div class="title">Settings</div><div class="chips"><span class="chip">Version ' + esc(st.version) + "</span></div></div></div>" +
+    '<div class="card"><div class="set-row"><div><h3>Language</h3><p>The language you mostly hear. Choosing one gives better results than automatic detection.</p></div><select class="select" id="sLang">' + langOptions(dr.lang) + "</select></div>" +
+    '<div class="set-row" style="display:block"><h3>Speech model</h3><p style="max-width:none">Bigger models are more accurate (especially for Hindi, Telugu and other languages) but need a faster computer. Your computer: ' + S.cat.hardware.cores + " cores, " + S.cat.hardware.ram_gb + " GB memory" + (S.cat.hardware.cuda ? ", NVIDIA graphics" : "") + '.</p></div><div class="models">' + models + "</div>" +
+    '<div class="set-row"><div><h3>Save location</h3><p>Recordings and transcripts are saved here. Existing recordings stay where they are.</p></div><div class="field" style="margin:0;min-width:300px;flex:1"><div class="row"><input class="input" id="sDir" value="' + esc(dr.dir) + '"><button class="btn" id="sBrowse">Browse…</button></div></div></div>' +
+    '<div class="set-row"><div>' + (dl.state === "running" ? '<h3>Downloading the model…</h3><p>' + Math.round(dl.progress * 100) + "%. You can keep using the app.</p>" : dl.state === "error" ? '<h3 style="color:var(--danger)">Download failed</h3><p>' + esc(dl.error) + "</p>" : "<h3>Apply changes</h3><p>Switching to a model that is not downloaded yet downloads it first.</p>") + '</div><button class="btn primary" id="sApply"' + (dl.state === "running" || st.recording || st.busy ? " disabled" : "") + ">Save changes</button></div></div>" +
+    '<div class="section-title"><h2>About and privacy</h2></div><div class="card pad"><p style="color:var(--muted)">I-L-F-U is free and open source (AGPL-3.0). It has no accounts and sends no audio or text anywhere. The internet is used only to download the speech model. <a href="https://github.com/myviapps/I-L-F-U" target="_blank" rel="noopener" style="color:var(--primary)">Project page</a></p></div>' +
+    '<div class="section-title"><h2>Uninstall</h2></div><div class="card pad" style="display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap"><p style="color:var(--muted);max-width:520px">Removes the app and its downloaded models from this computer. You will be asked whether to keep your recordings.</p><button class="btn danger" id="sUn">Uninstall…</button></div>';
+  v.querySelectorAll('input[name=model]').forEach(r => r.onchange = () => { dr.model = r.value; renderSettings(v); });
+  $("#sLang").onchange = e => dr.lang = e.target.value; $("#sDir").oninput = e => dr.dir = e.target.value;
+  $("#sBrowse").onclick = guard(async () => { const r = await api("/api/pick-folder", {method: "POST"}); if (r.path) { dr.dir = r.path; $("#sDir").value = r.path; } else toast("Type the folder path instead"); });
+  $("#sApply").onclick = guard(async () => { S.st = await api("/api/setup", {method: "POST", body: {accept_terms: true, save_dir: dr.dir, language: dr.lang, model: dr.model}}); S.cat = await api("/api/catalog"); toast(S.st.download.state === "running" ? "Downloading the model…" : "Settings saved"); schedulePoll(); render(); });
+  $("#sUn").onclick = () => overlay('<div class="dialog" role="dialog" aria-modal="true"><h2>Uninstall I-L-F-U?</h2><p>The app and its speech models will be removed. You will choose whether to keep your recordings and transcripts.</p><div class="foot"><button class="btn" id="no">Cancel</button><button class="btn danger solid" id="yes">Uninstall</button></div></div>') || ($("#no").onclick = closeOverlay, $("#yes").onclick = guard(async () => { const r = await api("/api/uninstall", {method: "POST"}); closeOverlay(); if (r.started) { document.body.innerHTML = '<div style="display:grid;place-items:center;height:100vh;text-align:center;padding:20px"><div><h2>The uninstaller has started</h2><p style="color:#6b7280">Continue in the window that opened. You can close this one.</p></div></div>'; clearTimeout(S.poll); } else toast(r.message, true); }));
+}
+
+/* ---------- setup wizard ---------- */
+function renderSetup() {
+  const w = S.setup, cat = S.cat, st = S.st;
+  if (!w.dir) { w.dir = st.config.save_dir || cat.default_save_dir; w.lang = st.config.language || "auto"; w.model = st.config.model || (cat.models.find(m => m.recommended) || cat.models[0]).name; }
+  const dots = '<div class="steps">' + [0,1,2,3].map(i => '<i class="' + (i <= w.step ? "on" : "") + '"></i>').join("") + "</div>";
+  let body = "", foot = "";
+  if (w.step === 0) {
+    body = "<h1>Welcome to I-L-F-U</h1><p>Record your online calls and get a written transcript. Everything runs on this computer. No account, no key, no upload.</p><div class=\"terms\" tabindex=\"0\">" + esc(cat.terms) + '</div><label class="check"><input type="checkbox" id="acc"' + (w.accept ? " checked" : "") + "> I have read the agreement and I accept it</label>";
+    foot = '<span></span><button class="btn primary" id="next"' + (w.accept ? "" : " disabled") + ">Continue</button>";
+  } else if (w.step === 1) {
+    body = '<h1>Where should recordings be saved?</h1><p>Each call gets its own folder here, with the audio and the transcript.</p><div class="field"><label for="dir">Folder</label><div class="row"><input class="input" id="dir" value="' + esc(w.dir) + '"><button class="btn" id="browse">Browse…</button></div><small>Audio takes roughly 60 MB per hour per track. Pick a drive with free space. You can change this later in Settings.</small></div>';
+    foot = '<button class="btn" id="back">Back</button><button class="btn primary" id="next">Continue</button>';
+  } else if (w.step === 2) {
+    const hw = cat.hardware, hint = (w.lang === "en" || w.lang === "auto") ? "English works well with every model." : "Accuracy for this language is much lower with the Fast model. Choose Accurate or Best if your computer can handle it, and check important words.";
+    body = '<h1>Language and speech model</h1><p>The model is downloaded once and stays on this computer.</p><div class="field"><label for="lang">Language you will mostly hear</label><select class="select" id="lang" style="width:100%">' + langOptions(w.lang) + "</select><small>" + hint + '</small></div><div class="field"><label>Speech model</label><div class="models" style="padding:0">' + cat.models.map(m => '<label class="model ' + (w.model === m.name ? "sel" : "") + '"><input type="radio" name="model" value="' + m.name + '"' + (w.model === m.name ? " checked" : "") + '><div><b>' + esc(m.label) + " · " + m.size_mb + " MB" + (m.recommended ? '<span class="tag rec">Recommended for this computer</span>' : "") + "</b><small>" + esc(m.note) + "</small></div></label>").join("") + "</div><small>This computer: " + hw.cores + " cores, " + hw.ram_gb + " GB memory" + (hw.cuda ? ", NVIDIA graphics" : "") + "</small></div>";
+    foot = '<button class="btn" id="back">Back</button><button class="btn primary" id="next">Download and finish</button>';
+  } else {
+    const dl = st.download, pct = Math.round((dl.progress || 0) * 100), m = cat.models.find(x => x.name === w.model);
+    body = "<h1>Getting ready</h1><p>Downloading the " + esc(m ? m.label : "") + " speech model (" + (m ? m.size_mb : "") + " MB). This is the only time the app uses the internet.</p>" +
+      '<div class="progress"><i style="width:' + (dl.state === "error" ? 0 : pct) + '%"></i></div><div style="color:var(--muted)">' + (dl.state === "error" ? '<span style="color:var(--danger)">Download failed: ' + esc(dl.error) + "</span>" : dl.state === "done" ? "Done." : pct + "% · you can leave this window open") + "</div>";
+    foot = '<button class="btn" id="back"' + (dl.state === "running" ? " disabled" : "") + ">Back</button>" + (dl.state === "error" ? '<button class="btn primary" id="retry">Try again</button>' : '<button class="btn primary" disabled><span class="spin"></span>&nbsp;Downloading</button>');
+  }
+  const html = '<div class="dialog wizard" role="dialog" aria-modal="true">' + dots + '<div class="wiz-body">' + body + '</div><div class="wiz-foot">' + foot + "</div></div>";
+  const key = html; if (S.setupKey === key) return; S.setupKey = key;
+  overlay(html, true);
+  const on = (id, fn) => { const e = $("#" + id); if (e) e.onclick = fn; };
+  const acc = $("#acc"); if (acc) acc.onchange = () => { w.accept = acc.checked; S.setupKey = ""; renderSetup(); };
+  on("next", guard(async () => {
+    if (w.step === 1) { w.dir = $("#dir").value; }
+    if (w.step === 2) { w.lang = $("#lang").value; w.model = ($("input[name=model]:checked") || {}).value; S.st = await api("/api/setup", {method: "POST", body: {accept_terms: w.accept, save_dir: w.dir, language: w.lang, model: w.model}}); S.cat = await api("/api/catalog"); schedulePoll(); }
+    w.step++; S.setupKey = ""; renderSetup(); checkSetupDone();
+  }));
+  on("back", () => { w.step--; S.setupKey = ""; renderSetup(); });
+  on("retry", guard(async () => { S.st = await api("/api/setup", {method: "POST", body: {accept_terms: true, save_dir: w.dir, language: w.lang, model: w.model}}); S.setupKey = ""; renderSetup(); schedulePoll(); }));
+  on("browse", guard(async () => { const r = await api("/api/pick-folder", {method: "POST"}); if (r.path) $("#dir").value = r.path; else toast("Type the folder path instead"); }));
+  document.querySelectorAll("input[name=model]").forEach(r => r.onchange = () => { w.lang = ($("#lang") || {}).value || w.lang; w.model = r.value; S.setupKey = ""; renderSetup(); });
+  const lg = $("#lang"); if (lg && w.step === 2) lg.onchange = () => { w.lang = lg.value; w.model = ($("input[name=model]:checked") || {}).value || w.model; S.setupKey = ""; renderSetup(); };
+}
+function checkSetupDone() { if (!S.st.setup_needed && S.setup.step === 3) { closeOverlay(); S.setupKey = ""; S.cat = null; api("/api/catalog").then(c => { S.cat = c; render(); }); toast("All set. You can record now."); loadSessions(); } }
+
+/* ---------- overlay ---------- */
+function overlay(html, solid) { const o = $("#overlay"); o.innerHTML = '<div class="overlay' + (solid ? " solid" : "") + '">' + html + "</div>"; }
+function closeOverlay() { $("#overlay").innerHTML = ""; }
+
+/* ---------- state polling ---------- */
+function updatePill() {
+  const st = S.st, p = $("#modelPill"); let cls = "", txt = "";
+  if (st.recording) { cls = "bad"; txt = st.paused ? "Paused" : "Recording"; }
+  else if (st.model_state === "ready") { cls = "ok"; txt = "Ready · " + st.config.model; }
+  else if (st.model_state === "loading") { cls = "warn"; txt = "Loading model…"; }
+  else if (st.model_state === "error") { cls = "bad"; txt = "Model problem"; }
+  else { txt = "Setup needed"; }
+  p.className = "pill " + cls; p.querySelector("span").textContent = txt;
+  $("#newBtn").disabled = !!(st.recording || st.busy === "finishing");
+}
+async function tick() {
+  try {
+    const prev = S.st;
+    const st = await api("/api/state?since=" + S.segs.length);
+    if (st.segment_total < S.segs.length) S.segs = [];
+    S.segs = S.segs.concat(st.segments);
+    S.st = st;
+    if (!S.cat) S.cat = await api("/api/catalog");
+    updatePill();
+    if (st.error) { toast(st.error, true); await api("/api/error/clear", {method: "POST"}); }
+    if (st.setup_needed) { renderSetup(); checkSetupDone(); }
+    else if ($("#overlay .wizard")) { closeOverlay(); }
+    if (!st.setup_needed) {
+      if (st.recording || st.busy === "finishing") { if (!$("#livebox")) render(); else { fillLive(false); updateLive(); } }
+      else {
+        if (prev && (prev.recording || prev.busy === "finishing") && !st.busy) { await loadSessions(); if (st.last_finished) { await openSession(st.last_finished); toast("Recording saved"); } else go("home"); }
+        else if (prev && prev.busy === "retranscribing" && !st.busy) { await loadSessions(); if (S.sid) await openSession(S.sid); toast("Transcript updated"); }
+        else if (prev && (prev.model_state !== st.model_state || prev.download.state !== st.download.state || prev.busy !== st.busy) || (st.download.state === "running" && S.view === "settings")) render();
+      }
+    }
+  } catch (e) { /* the server may be restarting; try again */ }
+  schedulePoll();
+}
+function schedulePoll() { clearTimeout(S.poll); const fast = S.st && (S.st.recording || S.st.busy || S.st.download.state === "running" || S.st.setup_needed); S.poll = setTimeout(tick, fast ? 600 : 2000); }
+
+/* ---------- boot ---------- */
+$("#newBtn").onclick = () => { if (!S.st.recording) go("home"); };
+$("#settingsBtn").onclick = () => { if (!S.st.recording) { S.settingsDraft = null; go("settings"); } };
+$("#search").oninput = e => { S.filter = e.target.value; renderList(); };
+window.addEventListener("pagehide", () => navigator.sendBeacon("/api/bye", "{}"));
+(async function boot() {
+  try { S.st = await api("/api/state"); S.cat = await api("/api/catalog"); } catch (e) { $("#view").innerHTML = '<div class="card hero"><h1>Could not reach the app</h1><p>Close this window and open I-L-F-U from the Start Menu again.</p></div>'; return; }
+  updatePill(); await loadSessions(); render();
+  if (S.st.setup_needed) renderSetup();
+  tick();
+})();
+</script>
+</body>
+</html>
