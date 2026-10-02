@@ -1,4 +1,4 @@
-# I-L-F-U: open-source call transcriber
+# I-L-F-U: I Listen For U, an open-source call transcriber
 
 A free, open-source transcriber for online video calls. It runs on your own machine, with no accounts, no API keys and no bot joining your meeting.
 
