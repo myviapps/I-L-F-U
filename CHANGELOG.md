@@ -5,6 +5,9 @@ All notable changes are listed here. Format based on [Keep a Changelog](https://
 ## [Unreleased]
 
 ### Added
+- Microphone and call-sound pickers, audio test, low-voice boost, silence padding for loopback capture, low-priority transcription.
+- One-file Windows installer (Inno Setup), built and tested in CI. Unsigned.
+- Accuracy and speed benchmark on FLEURS English, Hindi and Telugu (`ilfu benchmark`), first results in `docs/BENCHMARKS.md`.
 - First-run setup screen (agreement, save folder, language and model, model download with progress) and `ilfu setup`.
 - Live captions while recording, pause and resume, recording history (search, rename, delete, play, export, re-transcribe), regional language choice.
 - New interface: a local web app shown in its own Edge or Chrome window, replacing the first tkinter window. Light and dark themes.

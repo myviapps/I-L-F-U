@@ -11,7 +11,9 @@ Accuracy depends heavily on the language and the model size. Roughly:
 - **Telugu, Tamil, Kannada, Malayalam and other regional languages:** Whisper had far less training data for these. Expect noticeably more errors than in English, even with the Best model. Treat the output as a draft and check names, numbers and important sentences.
 - **Mixed speech** (for example Hindi and English in one sentence): works partly. Choosing one language forces everything into that language; "Detect automatically" can switch between short chunks and sometimes guesses wrong.
 
-These are general statements about Whisper, not measurements of this app. Measuring real error rates per language is on the roadmap (Phase 1), and improving regional languages by fine-tuning is planned for a later phase.
+## Measured so far
+
+On 25 FLEURS clips per language (see `docs/BENCHMARKS.md`): English 6 to 9% word errors, Hindi 106% with the Fast model and 58% with Balanced, Telugu 134% with Fast and 101% with Balanced. In plain terms: **Hindi and Telugu are not usable with the small models**, and Telugu is still poor with Balanced. The larger models have not been measured yet, so no claim is made for them. Improving regional languages by fine-tuning is planned for a later phase.
 
 ## Tips
 

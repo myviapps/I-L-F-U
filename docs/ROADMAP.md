@@ -22,20 +22,24 @@ Week counts are rough estimates. The gate is the real milestone. Tick a box only
     - [ ] Windows WASAPI backend run on a real Windows machine during a real call (code written, not yet run)
 - [ ] Engine: voice detection, faster-whisper, text and Markdown export
     - [x] Export to txt, Markdown and SRT, with tests
-    - [ ] faster-whisper run end to end on real audio (code written, needs a model download)
+    - [x] faster-whisper run end to end on real speech (FLEURS clips, in CI)
 - [ ] CLI for files and live devices
     - [x] `ilfu devices`, `record`, `tier`, `transcribe`, `eval`, `compare` (record and transcribe not yet run on real audio)
 - [ ] Evaluation harness, frozen test set, baseline WER for stock Whisper
     - [x] WER, manifest runner and back-to-back `compare` with tests
-    - [ ] Choose and download the frozen test set, check its licenses
-    - [ ] Record baseline WER for stock Whisper
+    - [x] Frozen test set: FLEURS en/hi/te, 25 clips each, CC BY 4.0, checksums in `benchmark/frozen-clips.json`
+    - [x] Baseline WER for stock Whisper base and small (`docs/BENCHMARKS.md`); medium and large-v3-turbo not yet measured
+    - [ ] Commit machine-readable baselines so CI can fail on a regression
 - [ ] Hardware check, automatic model tier, first-run wizard, one installer
     - [x] App interface (local web app in its own Edge/Chrome window): record, pause, live captions, history with search, rename, delete, audio player, export, re-transcribe; tested in a real browser and, with the real model and a fake audio source, on Windows in CI
-    - [ ] Live caption speed and accuracy measured on low-end machines
+    - [x] Speed and memory measured on 1 CPU core in CI (base keeps up, small does not); a real low-end PC is still to be tested
     - [x] Windows install script and uninstall (Settings > Apps, Help > Uninstall, script), install and uninstall tested in CI
     - [x] Hardware detection and tier choice (thresholds are guesses, to be measured)
     - [x] First-run setup screen: agreement, save folder, language and model, model download with progress (tested in a real browser in CI)
-    - [ ] One-file signed installer
+    - [x] One-file installer built, silently installed and uninstalled in CI (unsigned)
+    - [ ] Code-signing certificate, so Windows SmartScreen stops warning
+    - [x] Choose microphone and call-sound devices (external headsets), silence-safe capture, low-voice boost, low-priority transcription (tested with fake devices)
+    - [ ] Tested with real external devices on a real PC
 - [ ] Passive-capture check during a live call
 
 **Gate:** a real call transcribed fully offline by someone who did not build it.
