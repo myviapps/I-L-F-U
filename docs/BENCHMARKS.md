@@ -9,6 +9,7 @@ Word error rate (WER) is the share of words that are wrong. Lower is better; abo
 | base, 75 clips, 2 cores | 8.8% | 106.4% | 134.3% | 0.29 | 516 MB |
 | base, first 8 clips per language, 1 core | 12.3% | 112.5% | 130.2% | 0.35 | 498 MB |
 | small, first 8 clips per language, 1 core | 6.5% | 57.5% | 100.6% | 1.83 | 1149 MB |
+| large-v3-turbo (Best), first 10 clips per language, 2 cores | 6.0% | 35.2% | 81.4% | 2.11 | 2138 MB |
 
 The small model's full 75-clip run finished, but only its 1-core result could be read back from the logs; the full-set small row is still to be recorded.
 
@@ -18,7 +19,8 @@ The small model's full 75-clip run finished, but only its 1-core result could be
 - **Base cannot do Hindi or Telugu.** It writes Hindi in Urdu or Roman letters and produces nonsense for Telugu. This is the model, not the scoring: the sample lines are printed in the CI log.
 - **Small is much better for Hindi (57.5%) but still poor**, and Telugu is not usable (100.6%).
 - **Speed matters.** Small ran at 1.83 seconds of work per second of audio on one core, so it cannot keep up with live captions on a weak computer; base can (0.35). Live captions on a weak machine should use base for English or fall back to transcribing after the call.
-- The larger models (medium, large-v3-turbo) have not been measured yet. They are the likely answer for Hindi and Telugu and need a measurement before the app recommends them.
+- **large-v3-turbo (Best) is the best of the models tried:** Hindi 35% is readable as a draft, Telugu 81% still has most words wrong. It ran at 2.11 seconds of work per second of audio on 2 cores, so it cannot keep up live on a weak computer; use it with Re-transcribe after the call. It needs about 2.1 GB of memory.
+- The medium model (Accurate) is being measured; its row will be added here.
 
 ## Limits of these numbers
 
