@@ -8,15 +8,16 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import struct
 import tarfile
 import time
-import struct
 from pathlib import Path
 
 from .evaluation import Item
 from .transcribe import Transcriber
 from .wer import corpus_wer
 
+FROZEN_COUNT = 25
 REPO = "google/fleurs"
 # our short tag -> FLEURS config name and the language code Whisper is told to use
 LANGUAGES = {

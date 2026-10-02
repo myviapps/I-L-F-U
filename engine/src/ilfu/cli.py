@@ -42,7 +42,7 @@ def _cmd_benchmark(args: argparse.Namespace) -> int:
     items = []
     for tag in args.languages.split(","):
         print(f"Preparing {tag} clips...", flush=True)
-        items += benchmark.download(tag, args.cache, args.count)
+        items += benchmark.download(tag, args.cache, benchmark.FROZEN_COUNT)
     current, problems = benchmark.freeze_check(items, args.frozen)
     if problems:
         print("The test audio is not the frozen set:\n  " + "\n  ".join(problems))
@@ -51,6 +51,14 @@ def _cmd_benchmark(args: argparse.Namespace) -> int:
         args.frozen.parent.mkdir(parents=True, exist_ok=True)
         args.frozen.write_text(json.dumps(current, indent=1, sort_keys=True), encoding="utf-8")
         print(f"No frozen list yet: wrote {args.frozen}. Commit it so the set stays fixed.")
+    if args.count < benchmark.FROZEN_COUNT:  # a quick run uses the first clips of the frozen set
+        seen: dict[str, int] = {}
+        quick = []
+        for item in items:
+            seen[item.tag] = seen.get(item.tag, 0) + 1
+            if seen[item.tag] <= args.count:
+                quick.append(item)
+        items = quick
     from .transcribe import FasterWhisperTranscriber
 
     tier = choose_tier(detect_hardware())
@@ -187,7 +195,9 @@ def build_parser() -> argparse.ArgumentParser:
     bm = sub.add_parser("benchmark", help="measure accuracy and speed on the frozen FLEURS clips")
     bm.add_argument("--model", required=True, choices=[m.name for m in MODELS])
     bm.add_argument("--languages", default="en,hi,te")
-    bm.add_argument("--count", type=int, default=25, help="clips per language")
+    bm.add_argument(
+        "--count", type=int, default=25, help="clips per language to transcribe (frozen set: 25)"
+    )
     bm.add_argument("--cache", type=Path, default=Path("benchmark-cache"))
     bm.add_argument("--frozen", type=Path, default=Path("benchmark/frozen-clips.json"))
     bm.add_argument("--out", type=Path, default=Path("benchmark-report.json"))
