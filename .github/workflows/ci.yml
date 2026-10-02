@@ -165,6 +165,34 @@ jobs:
             report-*.json
             benchmark/frozen-clips.json
 
+  benchmark-large:
+    name: Accuracy and speed (${{ matrix.model }}, 10 clips each)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        model: [medium, large-v3-turbo]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/huggingface
+            benchmark-cache
+          key: fleurs-clips-v1-${{ matrix.model }}
+      - name: Install
+        run: python -m pip install -e "engine[asr]"
+      - name: Word error rate and speed on the first 10 frozen clips per language
+        run: |
+          ilfu benchmark --model ${{ matrix.model }} --count 10 --out report-${{ matrix.model }}.json --summary "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-${{ matrix.model }}
+          path: report-*.json
+
   web-ui:
     name: Web interface in a real browser
     runs-on: ubuntu-latest
