@@ -130,7 +130,7 @@ class Tone(AudioSource):
             block = struct.pack("<1600h", *([5000, -5000] * 800))
             while self._on:
                 callback(block)
-                time.sleep(0.02)
+                time.sleep(0.1)  # real time: each block is 0.1 s of audio
 
         self._t = threading.Thread(target=run, daemon=True)
         self._t.start()
@@ -362,6 +362,6 @@ def test_background_priority_is_lowered():
         "import os; from ilfu.capture.priority import lower_process_priority as f; "
         "a = os.nice(0); f(); print(os.nice(0) - a)"
     )
-    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=False)
     if sys.platform != "win32":
         assert int(out.stdout.strip()) > 0
