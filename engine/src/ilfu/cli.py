@@ -36,6 +36,37 @@ def _cmd_setup(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_benchmark(args: argparse.Namespace) -> int:
+    from . import benchmark
+
+    items = []
+    for tag in args.languages.split(","):
+        print(f"Preparing {tag} clips...", flush=True)
+        items += benchmark.download(tag, args.cache, args.count)
+    current, problems = benchmark.freeze_check(items, args.frozen)
+    if problems:
+        print("The test audio is not the frozen set:\n  " + "\n  ".join(problems))
+        return 3
+    if not args.frozen.exists():
+        args.frozen.parent.mkdir(parents=True, exist_ok=True)
+        args.frozen.write_text(json.dumps(current, indent=1, sort_keys=True), encoding="utf-8")
+        print(f"No frozen list yet: wrote {args.frozen}. Commit it so the set stays fixed.")
+    from .transcribe import FasterWhisperTranscriber
+
+    tier = choose_tier(detect_hardware())
+    transcriber = FasterWhisperTranscriber(
+        tier, model=args.model, beam_size=args.beam_size, cpu_threads=args.threads
+    )
+    report = benchmark.run(items, transcriber, args.label or args.model)
+    args.out.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    markdown = benchmark.to_markdown(report)
+    print(markdown)
+    if args.summary:
+        with args.summary.open("a", encoding="utf-8") as handle:
+            handle.write(markdown)
+    return 0
+
+
 def _cmd_devices(args: argparse.Namespace) -> int:
     backend = get_backend(args.backend)
     for name in backend.list_devices():
@@ -152,6 +183,19 @@ def build_parser() -> argparse.ArgumentParser:
     tr.add_argument("--language", help="language code such as en; auto-detected if omitted")
     tr.add_argument("--out", type=Path)
     tr.set_defaults(run=_cmd_transcribe)
+
+    bm = sub.add_parser("benchmark", help="measure accuracy and speed on the frozen FLEURS clips")
+    bm.add_argument("--model", required=True, choices=[m.name for m in MODELS])
+    bm.add_argument("--languages", default="en,hi,te")
+    bm.add_argument("--count", type=int, default=25, help="clips per language")
+    bm.add_argument("--cache", type=Path, default=Path("benchmark-cache"))
+    bm.add_argument("--frozen", type=Path, default=Path("benchmark/frozen-clips.json"))
+    bm.add_argument("--out", type=Path, default=Path("benchmark-report.json"))
+    bm.add_argument("--summary", type=Path, help="append a Markdown table to this file")
+    bm.add_argument("--label", help="name for this run in the report")
+    bm.add_argument("--beam-size", type=int, default=5)
+    bm.add_argument("--threads", type=int, help="CPU threads (default: about half the cores)")
+    bm.set_defaults(run=_cmd_benchmark)
 
     ev = sub.add_parser("eval", help="run the benchmark and save a WER report")
     ev.add_argument("manifest", type=Path, help="JSON-lines manifest of audio and reference text")

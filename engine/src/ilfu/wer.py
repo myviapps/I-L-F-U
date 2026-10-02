@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
-import re
+import unicodedata
 from dataclasses import dataclass
 
-_PUNCT = re.compile(r"[^\w\s']", re.UNICODE)
+
+def _keep(ch: str) -> bool:
+    # Letters, numbers and combining marks stay. The marks matter: Hindi and Telugu vowel signs
+    # are marks, and dropping them would cut words apart.
+    return ch == "'" or ch.isspace() or unicodedata.category(ch)[0] in "LNM"
 
 
 def normalize(text: str) -> list[str]:
@@ -14,7 +18,8 @@ def normalize(text: str) -> list[str]:
     This is a simple normalizer. Before publishing results we will switch to the Whisper
     normalizer so numbers 'ten' and '10' compare fairly, and say so in the results.
     """
-    return _PUNCT.sub(" ", text.lower()).split()
+    text = unicodedata.normalize("NFC", text).lower()
+    return "".join(ch if _keep(ch) else " " for ch in text).split()
 
 
 @dataclass(frozen=True)

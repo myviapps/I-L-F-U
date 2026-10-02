@@ -91,6 +91,80 @@ jobs:
           if (Test-Path $lnk) { throw 'shortcut still exists' }
           Write-Host 'Uninstall left nothing behind'
 
+  windows-setup-exe:
+    name: Windows one-file installer (build, install, uninstall)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build ILFU-Setup.exe with Inno Setup
+        shell: powershell
+        run: |
+          choco install innosetup -y --no-progress
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /DAppVersion=0.0.1 windows\installer\ilfu.iss
+          if (-not (Test-Path dist\ILFU-Setup-0.0.1.exe)) { throw 'installer was not built' }
+          Get-Item dist\ILFU-Setup-0.0.1.exe | Select-Object Name, Length
+      - name: Run the installer silently
+        shell: powershell
+        run: |
+          Start-Process dist\ILFU-Setup-0.0.1.exe -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -Wait
+          $dir = Join-Path $env:LOCALAPPDATA 'ILFU'
+          if (-not (Test-Path "$dir\venv\Scripts\ilfu.exe")) { throw 'installer did not install the app' }
+          if (-not (Test-Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\ILFU')) { throw 'Settings entry missing' }
+          $lnk = Join-Path ([Environment]::GetFolderPath('Programs')) 'I-L-F-U Call Transcriber.lnk'
+          if (-not (Test-Path $lnk)) { throw 'Start Menu shortcut missing' }
+          & "$dir\venv\Scripts\ilfu.exe" tier
+          & "$dir\venv\Scripts\python.exe" -c "import importlib.resources as r; assert r.files('ilfu').joinpath('web/index.html').is_file(); print('web interface files installed')"
+      - name: Uninstall and check nothing is left
+        shell: powershell
+        run: |
+          & "$env:LOCALAPPDATA\ILFU\uninstall.ps1" -Quiet
+          if (Test-Path (Join-Path $env:LOCALAPPDATA 'ILFU')) { throw 'install folder still exists' }
+          if (Test-Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\ILFU') { throw 'Settings entry still exists' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ILFU-Setup-unsigned
+          path: dist/ILFU-Setup-0.0.1.exe
+
+  benchmark:
+    name: Accuracy and speed (${{ matrix.model }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        model: [base, small]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/huggingface
+            benchmark-cache
+          key: fleurs-clips-v1-${{ matrix.model }}
+      - name: Install
+        run: python -m pip install -e "engine[asr]"
+      - name: Word error rate and speed on the frozen English, Hindi and Telugu clips
+        run: |
+          ilfu benchmark --model ${{ matrix.model }} --out report-${{ matrix.model }}.json --summary "$GITHUB_STEP_SUMMARY"
+      - name: Compare with the committed baseline (if there is one)
+        run: |
+          if [ -f benchmark/baseline-${{ matrix.model }}.json ]; then
+            ilfu compare benchmark/baseline-${{ matrix.model }}.json report-${{ matrix.model }}.json
+          else
+            echo "No baseline committed yet for ${{ matrix.model }}; this run produces it."
+          fi
+      - name: Speed on one CPU core (stand-in for a weak computer)
+        run: |
+          taskset -c 0 ilfu benchmark --model ${{ matrix.model }} --count 8 --threads 1 --label "${{ matrix.model }}, 1 CPU core" --out report-${{ matrix.model }}-1core.json --summary "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-${{ matrix.model }}
+          path: |
+            report-*.json
+            benchmark/frozen-clips.json
+
   web-ui:
     name: Web interface in a real browser
     runs-on: ubuntu-latest
