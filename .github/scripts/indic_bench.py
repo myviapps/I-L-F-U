@@ -2,6 +2,7 @@
 
 CI only. It loads the model code published with the model on Hugging Face (trust_remote_code),
 so it is not part of the app. Prints word error rate, speed, memory and sample lines.
+The model is gated on Hugging Face: huggingface_hub reads the HF_TOKEN environment variable.
 """
 
 import json

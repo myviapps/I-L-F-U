@@ -1,10 +1,17 @@
 version: 2
+# One grouped pull request per ecosystem each week, so updates use one CI run instead of many.
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      actions:
+        patterns: ["*"]
   - package-ecosystem: "pip"
     directory: "/engine"
     schedule:
       interval: "weekly"
+    groups:
+      pip:
+        patterns: ["*"]
