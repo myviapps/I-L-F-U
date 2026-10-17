@@ -15,3 +15,6 @@ dist/
 *.bin
 *.gguf
 *.onnx
+# local CI runs (scripts/check.sh)
+.ci-local/
+benchmark-cache/

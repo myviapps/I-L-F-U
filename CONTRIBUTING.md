@@ -20,7 +20,26 @@ ruff check .
 pytest
 ```
 
-CI runs the same checks on Windows, macOS and Linux.
+CI runs the same checks on Linux for pull requests, and on Windows, macOS and Linux for pushes to main, the weekly run and runs started by hand.
+
+## Testing without GitHub Actions
+
+When the Actions minutes run out, CI fails in seconds without running anything. Run the same jobs on your machine instead:
+
+```
+scripts/check.sh                                         # Linux, macOS
+powershell -ExecutionPolicy Bypass -File scripts\check.ps1   # Windows
+```
+
+By default this runs the offline jobs: engine lint and tests, and the web interface tests in a real Chromium. It creates `.venv` at the repository root (use `--no-venv` / `-NoVenv` to skip that) and ends with a PASS/FAIL line per job.
+
+- `--full` (`-Full`) also runs the speech model smoke test and the benchmarks. These download Whisper models and FLEURS clips from Hugging Face, so they need network access and a few GB of disk. Reports go to `.ci-local/`.
+- `--indic` also runs the IndicConformer benchmark (installs torch). It needs `HF_TOKEN` set to a Hugging Face token with access to the gated `ai4bharat/indic-conformer-600m-multilingual` model (accept its terms first); without it the job shows SKIP.
+- On Windows, `-Installer` and `-SetupExe` run the install script and installer tests. They install into `%LOCALAPPDATA%\ILFU` and uninstall again, so they refuse to run if the app is already installed. `-SetupExe` needs Inno Setup 6.
+
+When CI could not run, paste the summary of a green local run (or link to it) in the pull request, and say which jobs you ran.
+
+Claude Code cloud sessions install the engine automatically through `.claude/hooks/session-start.sh`. The cloud image has another `pytest` on PATH that cannot import `ilfu`; the hook puts the right one first, but if bare `pytest` fails with "No module named ilfu", use `python3 -m pytest` and `python3 -m ruff check .`.
 
 ## Reporting problems
 
