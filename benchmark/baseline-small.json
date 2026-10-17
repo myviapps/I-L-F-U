@@ -1,0 +1,14 @@
+{
+  "label": "small",
+  "model": "small",
+  "clips": 75,
+  "cpus": 2,
+  "wer_by_tag": {
+    "en": 0.068,
+    "hi": 0.549,
+    "te": 1.182
+  },
+  "real_time_factor": 2.18,
+  "source": "CI run 36961087768",
+  "note": "Summary baseline: per-language WER copied from the '75 clips, 2 cores' row of docs/BENCHMARKS.md (rounded to 0.1 point). No overall WER or per-clip text. Replace with a full report-small.json from a later CI run to refresh."
+}

@@ -8,7 +8,7 @@ import time
 from pathlib import Path
 
 from .capture import Recorder, get_backend
-from .evaluation import compare, evaluate, load_manifest
+from .evaluation import DEFAULT_TOLERANCE, compare, evaluate, load_manifest, load_report
 from .hardware import choose_tier, detect_hardware
 from .models import MODELS
 from .transcript import FORMATS
@@ -151,9 +151,18 @@ def _cmd_eval(args: argparse.Namespace) -> int:
 
 
 def _cmd_compare(args: argparse.Namespace) -> int:
-    old = json.loads(args.old.read_text(encoding="utf-8"))
-    new = json.loads(args.new.read_text(encoding="utf-8"))
-    ok, lines = compare(old, new, args.max_regression)
+    try:
+        old, new = load_report(args.old), load_report(args.new)
+    except (TypeError, ValueError) as exc:  # not JSON, or not a report
+        print(exc)
+        return 2
+    if args.tolerance is not None:
+        limit = args.tolerance / 100
+    elif args.max_regression is not None:  # older flag, a fraction
+        limit = args.max_regression
+    else:
+        limit = DEFAULT_TOLERANCE
+    ok, lines = compare(old, new, limit)
     print("\n".join(lines))
     return 0 if ok else 1
 
@@ -217,9 +226,14 @@ def build_parser() -> argparse.ArgumentParser:
     ev.set_defaults(run=_cmd_eval)
 
     cmp_ = sub.add_parser("compare", help="compare two reports; exit 1 on regression")
-    cmp_.add_argument("old", type=Path)
+    cmp_.add_argument("old", type=Path, help="baseline: a report or a summary baseline")
     cmp_.add_argument("new", type=Path)
-    cmp_.add_argument("--max-regression", type=float, default=0.005)
+    cmp_.add_argument(
+        "--tolerance",
+        type=float,
+        help=f"allowed WER increase in percentage points (default {DEFAULT_TOLERANCE * 100:g})",
+    )
+    cmp_.add_argument("--max-regression", type=float, help="same as --tolerance, as a fraction")
     cmp_.set_defaults(run=_cmd_compare)
     return parser
 

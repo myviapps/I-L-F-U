@@ -29,7 +29,7 @@ Week counts are rough estimates. The gate is the real milestone. Tick a box only
     - [x] WER, manifest runner and back-to-back `compare` with tests
     - [x] Frozen test set: FLEURS en/hi/te, 25 clips each, CC BY 4.0, checksums in `benchmark/frozen-clips.json`
     - [x] Baseline WER for stock Whisper base, small, medium and large-v3-turbo (`docs/BENCHMARKS.md`)
-    - [ ] Commit machine-readable baselines so CI can fail on a regression
+    - [x] Commit machine-readable baselines so CI can fail on a regression (`benchmark/baseline-base.json`, `benchmark/baseline-small.json`; tests in `engine/tests/test_compare.py`)
 - [ ] Hardware check, automatic model tier, first-run wizard, one installer
     - [x] App interface (local web app in its own Edge/Chrome window): record, pause, live captions, history with search, rename, delete, audio player, export, re-transcribe; tested in a real browser and, with the real model and a fake audio source, on Windows in CI
     - [x] Speed and memory measured on 1 CPU core in CI (base keeps up, small does not); a real low-end PC is still to be tested

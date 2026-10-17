@@ -27,6 +27,29 @@ Run to run, results move a little (small on one core: two runs, speed 1.83 and 2
 
 ## Limits of these numbers
 
-- 25 clips per language is a small sample; differences of a few points are noise (two identical base runs gave Hindi 107.4% and 106.4%).
+- 25 clips per language is a small sample; differences of about a point are noise (two identical base runs gave Hindi 107.4% and 106.4%). Noise has not been measured for Telugu, where base is above 100% and noise is likely larger.
 - FLEURS is read speech in a quiet room, not a noisy call.
 - One CPU core on a shared runner stands in for a weak computer; it is not a real low-end laptop.
+
+## Regression gate
+
+The benchmark job in CI compares each full run with a committed baseline and fails if word error rate got worse:
+
+```
+ilfu compare benchmark/baseline-base.json report-base.json
+```
+
+- It fails (exit 1) if the WER for any language, or overall when both files have it, is more than 2 percentage points worse than the baseline, or if a language in the baseline is missing from the new report. Change the limit with `--tolerance 3` (points). The older `--max-regression 0.03` (a fraction) still works.
+- 2 points is provisional, chosen from the noise above: two identical base runs differed by 1 point on Hindi. It may need raising, especially for Telugu, once more repeated runs exist. A change of exactly 2.0 points passes.
+- Speed is printed but never fails the job, because shared runners vary.
+- Getting better always passes. A language that is only in the new report is listed, not checked.
+
+`benchmark/baseline-base.json` and `benchmark/baseline-small.json` are summary baselines: the per-language WER from the "75 clips, 2 cores" rows above (CI run 36961087768), plus where they came from. They hold no per-clip text. Numbers are rounded to 0.1 point.
+
+To refresh a baseline after an intended change (new model, new normalizer, a real improvement):
+
+1. Run the benchmark job (label a pull request `run-heavy-ci`, or run the workflow by hand with `heavy` set to `benchmarks`), or run `ilfu benchmark --model base --out report-base.json` on your own machine.
+2. Download the `benchmark-<model>` artifact and copy `report-<model>.json` over `benchmark/baseline-<model>.json`. A full report works as a baseline as it is.
+3. Update the table above and say in the pull request why the numbers changed.
+
+Only compare runs of the full 25 clips per language; the compare output notes when the clip counts differ.
